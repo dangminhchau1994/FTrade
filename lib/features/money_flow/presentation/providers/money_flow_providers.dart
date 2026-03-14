@@ -1,14 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/datasources/money_flow_mock_datasource.dart';
+import '../../../../core/network/dio_provider.dart';
+import '../../data/datasources/money_flow_api_datasource.dart';
 import '../../domain/entities/foreign_flow.dart';
 import '../../domain/entities/market_flow_summary.dart';
 
-final moneyFlowDatasourceProvider =
-    Provider((ref) => MoneyFlowMockDatasource());
+final moneyFlowDatasourceProvider = Provider<MoneyFlowApiDatasource>((ref) {
+  final dio = ref.watch(dioClientProvider).dio;
+  return MoneyFlowApiDatasource(dio);
+});
 
-final marketFlowSummaryProvider =
-    FutureProvider<MarketFlowSummary>((ref) async {
+final marketFlowSummaryProvider = FutureProvider<MarketFlowSummary>((
+  ref,
+) async {
   final ds = ref.watch(moneyFlowDatasourceProvider);
   return ds.getMarketFlowSummary();
 });
@@ -25,6 +29,6 @@ final topNetSellersProvider = FutureProvider<List<ForeignFlow>>((ref) async {
 
 final foreignFlowHistoryProvider =
     FutureProvider.family<List<ForeignFlow>, String>((ref, symbol) async {
-  final ds = ref.watch(moneyFlowDatasourceProvider);
-  return ds.getForeignFlowHistory(symbol);
-});
+      final ds = ref.watch(moneyFlowDatasourceProvider);
+      return ds.getForeignFlowHistory(symbol);
+    });

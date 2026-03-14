@@ -3,6 +3,11 @@ class ApiConstants {
 
   static const String vndirectBase = 'https://api-finfo.vndirect.com.vn/v4';
   static const String vietstockTvNew = 'https://api.vietstock.vn/tvnew';
+  static const String vietstockFinanceBase = 'https://finance.vietstock.vn';
+  static const String kbsIisBase =
+      'https://kbbuddywts.kbsec.com.vn/iis-server/investment';
+  static const String kbsStockDataBase =
+      'https://kbbuddywts.kbsec.com.vn/sas/kbsv-stock-data-store/stock';
 
   // Stock prices - supports sort by date, pctChange, nmVolume
   static const String stockPrices = '$vndirectBase/stock_prices';
@@ -12,6 +17,28 @@ class ApiConstants {
 
   // Financial ratios (PE, PB, Market Cap, EPS, etc.)
   static const String ratios = '$vndirectBase/ratios/latest';
+
+  // Vietstock Finance pages/endpoints
+  static const String vietstockMoneyFlowPage =
+      '$vietstockFinanceBase/ket-qua-giao-dich.htm';
+  static const String vietstockCorporateEventsPage =
+      '$vietstockFinanceBase/lich-su-kien.htm';
+  static const String vietstockInsiderTradesPage =
+      '$vietstockFinanceBase/su-kien-doanh-nghiep.htm';
+  static const String vietstockForeignTrading =
+      '$vietstockFinanceBase/data/KQGDGiaoDichNDTNNPaging';
+  static const String vietstockEventTypes =
+      '$vietstockFinanceBase/data/eventtypebyid';
+  static const String vietstockEventData =
+      '$vietstockFinanceBase/data/eventstypedata';
+  static const String vietstockTransferData =
+      '$vietstockFinanceBase/data/eventstransferdata';
+
+  // KBS endpoints
+  static const String kbsStockProfile = '$kbsIisBase/stockinfo/profile';
+  static const String kbsSectorAll = '$kbsIisBase/sector/all';
+  static const String kbsSectorStock = '$kbsIisBase/sector/stock';
+  static const String kbsFinanceInfo = '$kbsStockDataBase/finance-info';
 
   // Ratio item codes
   static const String ratioMarketCap = '51003';
