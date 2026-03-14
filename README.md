@@ -1,45 +1,45 @@
 # FTrade
 
-Tool phân tích thị trường chứng khoán Việt Nam - tổng hợp thông tin, phân tích kỹ thuật & cơ bản, theo dõi dòng tiền.
+A Vietnamese stock market analysis tool — aggregating market data, technical & fundamental analysis, and money flow tracking.
 
-## Tính năng
+## Features
 
-### Tổng quan thị trường
-- Dashboard chỉ số VN-Index, HNX-Index, UPCOM
-- Market breadth (tăng/giảm/đứng giá)
-- Top tăng giá, giảm giá, khối lượng giao dịch
-- Tìm kiếm cổ phiếu
+### Market Overview
+- Dashboard with VN-Index, HNX-Index, UPCOM indices
+- Market breadth (advances/declines/unchanged)
+- Top gainers, losers, and most active by volume
+- Stock search
 
-### Phân tích kỹ thuật (TA)
-- Biểu đồ giá với 5 khung thời gian (1D, 1W, 1M, 3M, 1Y)
-- RSI (14-period Wilder's) với ngưỡng 30/70
-- MACD (12/26/9) - MACD line, Signal line, Histogram
-- Moving Average: MA5, MA10, MA20, MA50
-- Toggle indicator bằng FilterChip
+### Technical Analysis (TA)
+- Price chart with 5 timeframes (1D, 1W, 1M, 3M, 1Y)
+- RSI (14-period Wilder's) with 30/70 thresholds
+- MACD (12/26/9) — MACD line, Signal line, Histogram
+- Moving Averages: MA5, MA10, MA20, MA50
+- Toggle indicators with FilterChip UI
 
-### Phân tích cơ bản (FA)
-- Báo cáo tài chính: KQKD, CĐKT, LCTT (4 quý)
-- So sánh ngành: P/E, P/B, ROE, ROA, D/E, Vốn hóa
-- Bảng dữ liệu sortable, scrollable
+### Fundamental Analysis (FA)
+- Financial statements: Income Statement, Balance Sheet, Cash Flow (4 quarters)
+- Industry comparison: P/E, P/B, ROE, ROA, D/E, Market Cap
+- Sortable, scrollable data tables
 
-### Dòng tiền
-- Tổng quan dòng tiền nước ngoài (mua/bán/ròng)
-- Biểu đồ mua bán ròng 10 phiên gần nhất
-- Top 10 mã mua ròng & bán ròng
+### Money Flow
+- Foreign investor flow summary (buy/sell/net)
+- Net buy/sell bar chart for the last 10 sessions
+- Top 10 net buyers & sellers ranking
 
-### Doanh nghiệp
-- Lịch cổ tức: GDKHQ, ngày thanh toán, tỷ lệ
-- Sự kiện: ĐHCĐ, KQKD, phát hành, chốt quyền
-- Giao dịch nội bộ & tự doanh CTCK
+### Corporate Data
+- Dividend calendar: ex-date, payment date, ratio
+- Events: AGM, earnings reports, rights issues
+- Insider & proprietary trading activity
 
-### Tin tức
-- Tin tức thị trường & doanh nghiệp
-- Liên kết mã cổ phiếu liên quan
+### News
+- Market & corporate news feed
+- Related stock symbol linking
 
-### Watchlist & Cảnh báo
-- Theo dõi danh sách cổ phiếu yêu thích
-- Cảnh báo giá (vượt/dưới mức target)
-- Lưu trữ cục bộ với Hive
+### Watchlist & Alerts
+- Track favorite stocks
+- Price alerts (above/below target)
+- Local persistence with Hive
 
 ## Tech Stack
 
@@ -52,14 +52,14 @@ Tool phân tích thị trường chứng khoán Việt Nam - tổng hợp thông
 - **HTTP Client:** Dio
 - **Theme:** Material 3 (Dark/Light mode)
 
-## Nguồn dữ liệu
+## Data Sources
 
-- **Vietstock** - Dữ liệu thị trường
-- **VNDirect** - Thông tin giao dịch
+- **Vietstock** — Market data
+- **VNDirect** — Trading information
 
-> Hiện tại sử dụng mock data. Tích hợp API thật trong các phase tiếp theo.
+> Currently using mock data. Real API integration planned for upcoming phases.
 
-## Cấu trúc dự án
+## Project Structure
 
 ```
 lib/
@@ -74,7 +74,7 @@ lib/
 │   └── widgets/             # Reusable widgets
 └── features/                # Feature modules (Clean Architecture)
     ├── home/                # Dashboard
-    ├── market/              # Market data & stock detail & TA charts
+    ├── market/              # Market data, stock detail & TA charts
     ├── news/                # News feed
     ├── watchlist/           # Watchlist & price alerts
     ├── corporate/           # Dividends, events, insider trades
@@ -83,22 +83,26 @@ lib/
     └── settings/            # App settings
 ```
 
-## Chạy project
+## Getting Started
 
 ```bash
-# Cài dependencies
+# Install dependencies
 flutter pub get
 
 # Generate Freezed code
 dart run build_runner build --delete-conflicting-outputs
 
-# Chạy app
+# Run the app
 flutter run
 ```
 
 ## Roadmap
 
-- [x] **Phase 1** - Nền tảng dữ liệu (tin tức, giá, khối lượng)
-- [x] **Phase 2** - Phân tích & cảnh báo (TA indicators, watchlist, alerts)
-- [ ] **Phase 3** - Nhận định thông minh (AI recommendation)
-- [ ] **Phase 4** - Tích hợp VNDirect API, giao dịch tự động
+- [x] **Phase 1** — Data foundation (news, price, volume)
+- [x] **Phase 2** — Analysis & alerts (TA indicators, watchlist, alerts)
+- [ ] **Phase 3** — Smart insights (AI recommendations)
+- [ ] **Phase 4** — VNDirect API integration & auto-trading
+
+## Contributors
+
+- [@dangminhchau1994](https://github.com/dangminhchau1994)
