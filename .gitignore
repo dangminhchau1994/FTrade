@@ -1,0 +1,29 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# macOS
+.DS_Store
+
+# Environment
+.env
+.env.local
+
+# Misc
+*.log
+coverage/
+node_modules/
+dist/
+
+# Claude
+.claude/
