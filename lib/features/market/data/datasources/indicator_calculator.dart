@@ -1,4 +1,4 @@
-import 'chart_mock_datasource.dart';
+import '../../domain/entities/chart_point.dart';
 
 class IndicatorCalculator {
   IndicatorCalculator._();

@@ -2,25 +2,30 @@ import 'dart:math';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/format_utils.dart';
-import '../../data/datasources/chart_mock_datasource.dart';
+import '../../data/datasources/chart_api_datasource.dart';
 import '../../data/datasources/indicator_calculator.dart';
+import '../../domain/entities/chart_point.dart';
+import '../providers/market_providers.dart';
 
-class StockChart extends StatefulWidget {
+class StockChart extends ConsumerStatefulWidget {
   final String symbol;
 
   const StockChart({super.key, required this.symbol});
 
   @override
-  State<StockChart> createState() => _StockChartState();
+  ConsumerState<StockChart> createState() => _StockChartState();
 }
 
-class _StockChartState extends State<StockChart> {
+class _StockChartState extends ConsumerState<StockChart> {
   String _selectedPeriod = '1M';
-  late List<ChartPoint> _data;
-  late Map<String, List<double?>> _indicators;
+  List<ChartPoint> _data = [];
+  Map<String, List<double?>> _indicators = {};
+  bool _loading = true;
+  int _loadRequestId = 0;
 
   final Set<String> _activeIndicators = {'MA20'};
 
@@ -33,152 +38,263 @@ class _StockChartState extends State<StockChart> {
     'MA50': Colors.purple,
   };
 
+  late final ChartApiDatasource _chartApi;
+
   @override
   void initState() {
     super.initState();
+    _chartApi = ref.read(chartApiDatasourceProvider);
     _loadData();
   }
 
-  void _loadData() {
-    _data = ChartMockDatasource.generate(period: _selectedPeriod);
-    _indicators = IndicatorCalculator.calculate(_data);
+  @override
+  void didUpdateWidget(covariant StockChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.symbol != widget.symbol) {
+      setState(() {
+        _data = [];
+        _indicators = {};
+        _loading = true;
+      });
+      _loadData();
+    }
+  }
+
+  Future<void> _loadData() async {
+    final requestId = ++_loadRequestId;
+    setState(() => _loading = true);
+
+    List<ChartPoint> nextData;
+    try {
+      final data = await _chartApi.getChartData(
+        widget.symbol,
+        period: _selectedPeriod,
+      );
+      nextData = data;
+    } catch (_) {
+      nextData = [];
+    }
+
+    final nextIndicators = IndicatorCalculator.calculate(nextData);
+
+    if (!mounted || requestId != _loadRequestId) {
+      return;
+    }
+
+    setState(() {
+      _data = nextData;
+      _indicators = nextIndicators;
+      _loading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isUp = _data.last.close >= _data.first.open;
+    final hasData = _data.isNotEmpty;
+    final isUp = hasData ? _data.last.close >= _data.first.open : true;
     final color = isUp ? AppTheme.gainColor : AppTheme.lossColor;
-
-    final minY = _data.map((p) => p.low).reduce(min);
-    final maxY = _data.map((p) => p.high).reduce(max);
-    final padding = (maxY - minY) * 0.1;
+    final minY = hasData ? _data.map((p) => p.low).reduce(min) : 0.0;
+    final maxY = hasData ? _data.map((p) => p.high).reduce(max) : 0.0;
+    final padding = hasData ? (maxY - minY) * 0.1 : 0.0;
 
     return Column(
       children: [
         // Main price chart with MA overlays
         SizedBox(
           height: 200,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: (maxY - minY) / 4,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.grey.withValues(alpha: 0.15),
-                    strokeWidth: 1,
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 60,
-                      getTitlesWidget: (value, meta) {
-                        if (value == meta.min || value == meta.max) {
-                          return const SizedBox.shrink();
-                        }
-                        return Text(
-                          FormatUtils.price(value),
-                          style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-                        );
-                      },
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (hasData)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: LineChart(
+                    LineChartData(
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        horizontalInterval: (maxY - minY) / 4,
+                        getDrawingHorizontalLine: (value) => FlLine(
+                          color: Colors.grey.withValues(alpha: 0.15),
+                          strokeWidth: 1,
+                        ),
+                      ),
+                      titlesData: FlTitlesData(
+                        topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 60,
+                            getTitlesWidget: (value, meta) {
+                              if (value == meta.min || value == meta.max) {
+                                return const SizedBox.shrink();
+                              }
+                              return Text(
+                                FormatUtils.price(value),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[600],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        leftTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        bottomTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      minY: minY - padding,
+                      maxY: maxY + padding,
+                      lineTouchData: LineTouchData(
+                        touchTooltipData: LineTouchTooltipData(
+                          getTooltipItems: (spots) => spots
+                              .map(
+                                (s) => LineTooltipItem(
+                                  FormatUtils.price(s.y),
+                                  TextStyle(
+                                    color: color,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                      lineBarsData: [
+                        // Price line
+                        LineChartBarData(
+                          spots: _data.asMap().entries
+                              .map((e) => FlSpot(e.key.toDouble(), e.value.close))
+                              .toList(),
+                          isCurved: true,
+                          preventCurveOverShooting: true,
+                          color: color,
+                          barWidth: 2,
+                          isStrokeCapRound: true,
+                          dotData: const FlDotData(show: false),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                color.withValues(alpha: 0.25),
+                                color.withValues(alpha: 0.0),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // MA overlays
+                        ..._maColors.entries
+                            .where((e) => _activeIndicators.contains(e.key))
+                            .map((e) => _maLine(e.key.toLowerCase(), e.value)),
+                      ],
                     ),
                   ),
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                ),
-                borderData: FlBorderData(show: false),
-                minY: minY - padding,
-                maxY: maxY + padding,
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipItems: (spots) => spots
-                        .map((s) => LineTooltipItem(
-                              FormatUtils.price(s.y),
-                              TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
-                            ))
-                        .toList(),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: _loading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              'No chart data',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                    ),
                   ),
                 ),
-                lineBarsData: [
-                  // Price line
-                  LineChartBarData(
-                    spots: _data.asMap().entries
-                        .map((e) => FlSpot(e.key.toDouble(), e.value.close))
-                        .toList(),
-                    isCurved: true,
-                    preventCurveOverShooting: true,
-                    color: color,
-                    barWidth: 2,
-                    isStrokeCapRound: true,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          color.withValues(alpha: 0.25),
-                          color.withValues(alpha: 0.0),
-                        ],
+              if (_loading && hasData)
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                       ),
                     ),
                   ),
-                  // MA overlays
-                  ..._maColors.entries
-                      .where((e) => _activeIndicators.contains(e.key))
-                      .map((e) => _maLine(e.key.toLowerCase(), e.value)),
-                ],
-              ),
-            ),
+                ),
+            ],
           ),
         ),
 
-        const SizedBox(height: 8),
+        if (hasData) ...[
+          const SizedBox(height: 8),
 
-        // Volume bars
-        SizedBox(
-          height: 40,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: BarChart(
-              BarChartData(
-                gridData: const FlGridData(show: false),
-                titlesData: const FlTitlesData(show: false),
-                borderData: FlBorderData(show: false),
-                barGroups: _data.asMap().entries
-                    .map((e) => BarChartGroupData(
-                          x: e.key,
-                          barRods: [
-                            BarChartRodData(
-                              toY: e.value.volume.toDouble(),
-                              color: e.value.close >= e.value.open
-                                  ? AppTheme.gainColor.withValues(alpha: 0.5)
-                                  : AppTheme.lossColor.withValues(alpha: 0.5),
-                              width: (MediaQuery.of(context).size.width - 32) / _data.length * 0.7,
-                              borderRadius: BorderRadius.circular(1),
-                            ),
-                          ],
-                        ))
-                    .toList(),
-                barTouchData: BarTouchData(enabled: false),
+          // Volume bars
+          SizedBox(
+            height: 40,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: BarChart(
+                BarChartData(
+                  gridData: const FlGridData(show: false),
+                  titlesData: const FlTitlesData(show: false),
+                  borderData: FlBorderData(show: false),
+                  barGroups: _data.asMap().entries
+                      .map((e) => BarChartGroupData(
+                            x: e.key,
+                            barRods: [
+                              BarChartRodData(
+                                toY: e.value.volume.toDouble(),
+                                color: e.value.close >= e.value.open
+                                    ? AppTheme.gainColor.withValues(alpha: 0.5)
+                                    : AppTheme.lossColor.withValues(alpha: 0.5),
+                                width:
+                                    (MediaQuery.of(context).size.width - 32) /
+                                    _data.length *
+                                    0.7,
+                                borderRadius: BorderRadius.circular(1),
+                              ),
+                            ],
+                          ))
+                      .toList(),
+                  barTouchData: BarTouchData(enabled: false),
+                ),
               ),
             ),
           ),
-        ),
+        ],
 
         // RSI panel
-        if (_activeIndicators.contains('RSI')) ...[
+        if (hasData && _activeIndicators.contains('RSI')) ...[
           const SizedBox(height: 4),
           _buildRSIPanel(),
         ],
 
         // MACD panel
-        if (_activeIndicators.contains('MACD')) ...[
+        if (hasData && _activeIndicators.contains('MACD')) ...[
           const SizedBox(height: 4),
           _buildMACDPanel(),
         ],
@@ -227,10 +343,9 @@ class _StockChartState extends State<StockChart> {
               final isSelected = period == _selectedPeriod;
               return GestureDetector(
                 onTap: () {
-                  setState(() {
-                    _selectedPeriod = period;
-                    _loadData();
-                  });
+                  if (isSelected) return;
+                  setState(() => _selectedPeriod = period);
+                  _loadData();
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

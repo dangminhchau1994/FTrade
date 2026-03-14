@@ -5,16 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/widgets/stock_list_tile.dart';
-import '../../domain/entities/stock.dart';
 import '../providers/market_providers.dart';
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
-
-final searchResultsProvider = FutureProvider<List<Stock>>((ref) {
-  final query = ref.watch(searchQueryProvider);
-  if (query.isEmpty) return Future.value([]);
-  return ref.watch(marketDatasourceProvider).searchStocks(query);
-});
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -43,8 +36,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final results = ref.watch(searchResultsProvider);
     final query = ref.watch(searchQueryProvider);
+    final results = ref.watch(searchResultsProvider(query));
 
     return Scaffold(
       appBar: AppBar(

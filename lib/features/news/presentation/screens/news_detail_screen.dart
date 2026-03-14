@@ -3,13 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/utils/format_utils.dart';
-import '../../data/datasources/news_mock_datasource.dart';
-import '../../domain/entities/news_article.dart';
-
-final newsDetailProvider =
-    FutureProvider.family<NewsArticle, String>((ref, id) {
-  return NewsMockDatasource().getNewsDetail(id);
-});
+import '../providers/news_providers.dart';
 
 class NewsDetailScreen extends ConsumerWidget {
   final String id;
@@ -39,6 +33,17 @@ class NewsDetailScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (a.imageUrl != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    a.imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               Text(
                 a.title,
                 style: const TextStyle(
@@ -106,9 +111,8 @@ class NewsDetailScreen extends ConsumerWidget {
                   ),
                 ),
               const SizedBox(height: 16),
-              // Mock full content
               Text(
-                _mockContent(a.title),
+                a.content ?? a.summary ?? '',
                 style: TextStyle(
                   fontSize: 15,
                   height: 1.7,
@@ -122,19 +126,5 @@ class NewsDetailScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Lỗi: $e')),
       ),
     );
-  }
-
-  String _mockContent(String title) {
-    return 'Theo các chuyên gia phân tích, diễn biến thị trường trong phiên giao dịch '
-        'hôm nay cho thấy nhiều tín hiệu tích cực. Dòng tiền đang có xu hướng quay trở lại '
-        'các nhóm cổ phiếu trụ, đặc biệt là nhóm ngân hàng và công nghệ.\n\n'
-        'Thanh khoản thị trường cải thiện đáng kể so với phiên trước, cho thấy sự tham gia '
-        'tích cực hơn của nhà đầu tư. Khối ngoại cũng ghi nhận phiên mua ròng đáng kể '
-        'tập trung vào các mã vốn hóa lớn.\n\n'
-        'Về mặt kỹ thuật, VN-Index đang tiếp cận vùng kháng cự quan trọng. Nếu vượt qua '
-        'được vùng này với thanh khoản tốt, chỉ số có thể tiếp tục xu hướng tăng trong '
-        'các phiên tới.\n\n'
-        'Các chuyên gia khuyến nghị nhà đầu tư nên duy trì tỷ trọng cổ phiếu ở mức hợp lý, '
-        'ưu tiên các mã có nền tảng cơ bản tốt và câu chuyện tăng trưởng rõ ràng.';
   }
 }

@@ -56,6 +56,8 @@ dependencies:
 
   # Logger
   logger: ^2.5.0
+  xml: ^6.5.0
+  html: ^0.15.6
 
 dev_dependencies:
   flutter_test:

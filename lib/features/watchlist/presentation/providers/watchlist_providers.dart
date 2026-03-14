@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-import '../../../market/data/datasources/market_mock_datasource.dart';
 import '../../../market/domain/entities/stock.dart';
+import '../../../market/presentation/providers/market_providers.dart';
 
 const _boxName = 'watchlist';
 
@@ -53,21 +53,5 @@ final watchlistStocksProvider = FutureProvider<List<Stock>>((ref) async {
   final symbols = ref.watch(watchlistSymbolsProvider);
   if (symbols.isEmpty) return [];
 
-  final datasource = MarketMockDatasource();
-  final allStocks = [
-    ...await datasource.getTopGainers(),
-    ...await datasource.getTopLosers(),
-    ...await datasource.getTopVolume(),
-  ];
-
-  // Deduplicate and filter by watchlist symbols
-  final stockMap = <String, Stock>{};
-  for (final s in allStocks) {
-    stockMap[s.symbol] = s;
-  }
-
-  return symbols
-      .where((sym) => stockMap.containsKey(sym))
-      .map((sym) => stockMap[sym]!)
-      .toList();
+  return ref.watch(marketApiDatasourceProvider).getStocksBySymbols(symbols);
 });
