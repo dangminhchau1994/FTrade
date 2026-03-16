@@ -7,26 +7,29 @@ class StockChangeText extends StatelessWidget {
   final double change;
   final double changePercent;
   final double fontSize;
+  final Color? color;
 
   const StockChangeText({
     super.key,
     required this.change,
     required this.changePercent,
     this.fontSize = 13,
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = change > 0
-        ? AppTheme.gainColor
-        : change < 0
-            ? AppTheme.lossColor
-            : Colors.grey;
+    final displayColor = color ??
+        (change > 0
+            ? AppTheme.gainColor
+            : change < 0
+                ? AppTheme.lossColor
+                : Colors.grey);
 
     return Text(
-      '${FormatUtils.change(change)} (${FormatUtils.percent(changePercent)})',
+      FormatUtils.changeWithPercent(change, changePercent),
       style: TextStyle(
-        color: color,
+        color: displayColor,
         fontSize: fontSize,
         fontWeight: FontWeight.w600,
       ),

@@ -9,11 +9,6 @@ class ApiConstants {
   static const String ssiWebSocketUrl =
       'wss://wgateway-iboard.ssi.com.vn/graphql';
   static const String ssiWebSocketProtocol = 'graphql-transport-ws';
-  static const String kbsIisBase =
-      'https://kbbuddywts.kbsec.com.vn/iis-server/investment';
-  static const String kbsStockDataBase =
-      'https://kbbuddywts.kbsec.com.vn/sas/kbsv-stock-data-store/stock';
-
   // Stock prices - supports sort by date, pctChange, nmVolume
   static const String stockPrices = '$vndirectBase/stock_prices';
 
@@ -38,12 +33,6 @@ class ApiConstants {
       '$vietstockFinanceBase/data/eventstypedata';
   static const String vietstockTransferData =
       '$vietstockFinanceBase/data/eventstransferdata';
-
-  // KBS endpoints
-  static const String kbsStockProfile = '$kbsIisBase/stockinfo/profile';
-  static const String kbsSectorAll = '$kbsIisBase/sector/all';
-  static const String kbsSectorStock = '$kbsIisBase/sector/stock';
-  static const String kbsFinanceInfo = '$kbsStockDataBase/finance-info';
 
   // Ratio item codes
   static const String ratioMarketCap = '51003';

@@ -4,522 +4,348 @@ import '../../../../core/constants/api_constants.dart';
 import '../../domain/entities/financial_statement.dart';
 import '../../domain/entities/industry_comparison.dart';
 
+/// Datasource BCTC & so sánh ngành - dùng VNDirect API
 class FundamentalApiDatasource {
   FundamentalApiDatasource(this._dio);
 
   final Dio _dio;
 
-  final Map<int, Future<List<String>>> _sectorSymbolsCache = {};
-  final Map<String, Future<_IndustryContext?>> _industryCache = {};
-  final Map<String, Future<_PeerMetrics>> _peerMetricCache = {};
+  // VNDirect financial statements endpoint
+  static const _financialStatementsUrl =
+      '${ApiConstants.vndirectBase}/financial_statements';
 
-  static const Map<String, List<String>> _incomeLinePatterns = {
-    'Doanh thu thuần': ['Doanh thu thuần về bán hàng và cung cấp dịch vụ'],
-    'Giá vốn hàng bán': ['Giá vốn hàng bán'],
-    'Lợi nhuận gộp': ['Lợi nhuận gộp về bán hàng và cung cấp dịch vụ'],
-    'Chi phí bán hàng': ['Chi phí bán hàng'],
-    'Chi phí quản lý': ['Chi phí quản lý doanh nghiệp'],
-    'Chi phí tài chính': ['Chi phí tài chính'],
-    'Lợi nhuận từ HĐKD': ['Lợi nhuận thuần từ hoạt động kinh doanh'],
-    'Lợi nhuận trước thuế': ['Tổng lợi nhuận kế toán trước thuế'],
-    'Lợi nhuận sau thuế': ['Lợi nhuận sau thuế thu nhập doanh nghiệp'],
+  static const _incomeLineItems = {
+    'Doanh thu thuần': 'NET_REVENUE',
+    'Giá vốn hàng bán': 'COST_OF_GOODS_SOLD',
+    'Lợi nhuận gộp': 'GROSS_PROFIT',
+    'Chi phí bán hàng': 'SELLING_EXPENSES',
+    'Chi phí quản lý': 'GENERAL_ADMIN_EXPENSES',
+    'Chi phí tài chính': 'FINANCIAL_EXPENSES',
+    'Lợi nhuận từ HĐKD': 'OPERATING_PROFIT',
+    'Lợi nhuận trước thuế': 'PROFIT_BEFORE_TAX',
+    'Lợi nhuận sau thuế': 'PROFIT_AFTER_TAX',
   };
 
-  static const Map<String, List<String>> _balanceLinePatterns = {
-    'Tổng tài sản': ['TỔNG CỘNG TÀI SẢN'],
-    'Tài sản ngắn hạn': ['A. TÀI SẢN NGẮN HẠN'],
-    'Tài sản dài hạn': ['B. TÀI SẢN DÀI HẠN'],
-    'Tiền và tương đương tiền': ['Tiền và các khoản tương đương tiền'],
-    'Hàng tồn kho': ['IV. Hàng tồn kho'],
-    'Nợ phải trả': ['A. NỢ PHẢI TRẢ'],
-    'Nợ ngắn hạn': ['I. Nợ ngắn hạn'],
-    'Nợ dài hạn': ['II. Nợ dài hạn'],
-    'Vốn chủ sở hữu': ['B. VỐN CHỦ SỞ HỮU'],
+  static const _balanceLineItems = {
+    'Tổng tài sản': 'TOTAL_ASSETS',
+    'Tài sản ngắn hạn': 'SHORT_TERM_ASSETS',
+    'Tài sản dài hạn': 'LONG_TERM_ASSETS',
+    'Tiền và tương đương tiền': 'CASH_AND_CASH_EQUIVALENTS',
+    'Hàng tồn kho': 'INVENTORIES',
+    'Nợ phải trả': 'TOTAL_LIABILITIES',
+    'Nợ ngắn hạn': 'SHORT_TERM_LIABILITIES',
+    'Nợ dài hạn': 'LONG_TERM_LIABILITIES',
+    'Vốn chủ sở hữu': 'OWNER_EQUITY',
   };
 
-  static const Map<String, List<String>> _cashFlowLinePatterns = {
-    'Lưu chuyển tiền từ HĐKD': [
-      'Lưu chuyển tiền thuần từ hoạt động kinh doanh',
-    ],
-    'Lưu chuyển tiền từ HĐĐT': ['Lưu chuyển tiền thuần từ hoạt động đầu tư'],
-    'Lưu chuyển tiền từ HĐTC': ['Lưu chuyển tiền thuần từ hoạt động tài chính'],
-    'Tăng/giảm tiền thuần': ['Lưu chuyển tiền thuần trong kỳ'],
-  };
-
-  static const _negativeIncomeLabels = {
-    'Giá vốn hàng bán',
-    'Chi phí bán hàng',
-    'Chi phí quản lý',
-    'Chi phí tài chính',
+  static const _cashFlowLineItems = {
+    'Lưu chuyển tiền từ HĐKD': 'NET_CASH_FLOWS_FROM_OPERATING',
+    'Lưu chuyển tiền từ HĐĐT': 'NET_CASH_FLOWS_FROM_INVESTING',
+    'Lưu chuyển tiền từ HĐTC': 'NET_CASH_FLOWS_FROM_FINANCING',
+    'Tăng/giảm tiền thuần': 'NET_CASH_FLOWS',
   };
 
   Future<List<FinancialStatement>> getIncomeStatements(String symbol) async {
-    final data = await _fetchFinanceInfo(
+    return _fetchStatements(
       symbol: symbol,
-      reportType: 'KQKD',
-      periodType: 2,
-    );
-
-    final rows = _extractRows(data, 'Kết quả kinh doanh');
-    return _buildStatements(
-      symbol: symbol,
-      type: StatementType.incomeStatement,
-      periods: _extractPeriods(data['Head'] as List? ?? const []),
-      rows: rows,
-      linePatterns: _incomeLinePatterns,
-      negativeLabels: _negativeIncomeLabels,
+      reportType: 'IS',
+      statementType: StatementType.incomeStatement,
+      lineItems: _incomeLineItems,
     );
   }
 
   Future<List<FinancialStatement>> getBalanceSheets(String symbol) async {
-    final data = await _fetchFinanceInfo(
+    return _fetchStatements(
       symbol: symbol,
-      reportType: 'CDKT',
-      periodType: 2,
-    );
-
-    final rows = _extractRows(data, 'Cân đối kế toán');
-    return _buildStatements(
-      symbol: symbol,
-      type: StatementType.balanceSheet,
-      periods: _extractPeriods(data['Head'] as List? ?? const []),
-      rows: rows,
-      linePatterns: _balanceLinePatterns,
+      reportType: 'BS',
+      statementType: StatementType.balanceSheet,
+      lineItems: _balanceLineItems,
     );
   }
 
   Future<List<FinancialStatement>> getCashFlows(String symbol) async {
-    final data = await _fetchFinanceInfo(
+    return _fetchStatements(
       symbol: symbol,
-      reportType: 'LCTT',
-      periodType: 1,
-    );
-
-    final content = data['Content'] as Map<String, dynamic>? ?? const {};
-    final reportKey =
-        content.containsKey('Lưu chuyển tiền tệ gián tiếp')
-            ? 'Lưu chuyển tiền tệ gián tiếp'
-            : 'Lưu chuyển tiền tệ trực tiếp';
-    final rows = _extractRows(data, reportKey);
-
-    return _buildStatements(
-      symbol: symbol,
-      type: StatementType.cashFlow,
-      periods: _extractPeriods(data['Head'] as List? ?? const []),
-      rows: rows,
-      linePatterns: _cashFlowLinePatterns,
+      reportType: 'CF',
+      statementType: StatementType.cashFlow,
+      lineItems: _cashFlowLineItems,
     );
   }
 
   Future<List<IndustryComparison>> getIndustryComparison(String symbol) async {
     final normalizedSymbol = symbol.toUpperCase();
-    final industry = await _resolveIndustry(normalizedSymbol);
-    final industryName = industry?.name ?? 'Khác';
-    final sectorSymbols = industry?.symbols ?? [normalizedSymbol];
-    final allSymbols = _dedupeSymbols([...sectorSymbols, normalizedSymbol]);
 
-    final marketCaps = await _fetchMarketCaps(allSymbols);
-    final selectedSymbols = _selectPeerSymbols(
-      allSymbols,
+    // Lấy thông tin ngành từ stock profile
+    final stockInfo = await _fetchStockInfo(normalizedSymbol);
+    final industryCode = stockInfo['industryCode'] as String? ?? '';
+    final industryName = stockInfo['industry'] as String? ?? 'Khác';
+
+    // Lấy danh sách cổ phiếu cùng ngành
+    List<String> peerSymbols;
+    if (industryCode.isNotEmpty) {
+      peerSymbols = await _fetchIndustryPeers(industryCode);
+    } else {
+      peerSymbols = [normalizedSymbol];
+    }
+
+    // Đảm bảo symbol target nằm trong danh sách
+    if (!peerSymbols.contains(normalizedSymbol)) {
+      peerSymbols.add(normalizedSymbol);
+    }
+
+    // Lấy market cap để chọn top peers
+    final marketCaps = await _fetchMarketCaps(peerSymbols);
+    final selectedSymbols = _selectTopPeers(
+      peerSymbols,
       normalizedSymbol,
       marketCaps,
     );
+
+    // Lấy tên công ty và ratios
     final companyNames = await _fetchCompanyNames(selectedSymbols);
-    final metrics = await Future.wait(selectedSymbols.map(_getPeerMetrics));
+    final ratios = await _fetchRatios(selectedSymbols);
 
-    final comparisons = <IndustryComparison>[];
-    for (var index = 0; index < selectedSymbols.length; index++) {
-      final peerSymbol = selectedSymbols[index];
-      final peerMetrics = metrics[index];
-      comparisons.add(
-        IndustryComparison(
-          symbol: peerSymbol,
-          companyName:
-              companyNames[peerSymbol] ??
-              companyNames[normalizedSymbol] ??
-              peerSymbol,
-          industry: industryName,
-          pe: peerMetrics.pe,
-          pb: peerMetrics.pb,
-          roe: peerMetrics.roe,
-          roa: peerMetrics.roa,
-          debtToEquity: peerMetrics.debtToEquity,
-          marketCap: marketCaps[peerSymbol] ?? 0,
-          isTarget: peerSymbol == normalizedSymbol,
-        ),
+    return selectedSymbols.map((s) {
+      final r = ratios[s] ?? const {};
+      return IndustryComparison(
+        symbol: s,
+        companyName: companyNames[s] ?? s,
+        industry: industryName,
+        pe: _toDouble(r['pe']),
+        pb: _toDouble(r['pb']),
+        roe: _toDouble(r['roe']),
+        roa: _toDouble(r['roa']),
+        debtToEquity: _toDouble(r['debtToEquity']),
+        marketCap: marketCaps[s] ?? 0,
+        isTarget: s == normalizedSymbol,
       );
-    }
-
-    comparisons.sort((a, b) => b.marketCap.compareTo(a.marketCap));
-    return comparisons;
+    }).toList()
+      ..sort((a, b) => b.marketCap.compareTo(a.marketCap));
   }
 
-  Future<Map<String, dynamic>> _fetchFinanceInfo({
+  // --- Private: Financial Statements ---
+
+  Future<List<FinancialStatement>> _fetchStatements({
     required String symbol,
     required String reportType,
-    required int periodType,
+    required StatementType statementType,
+    required Map<String, String> lineItems,
   }) async {
-    final queryParameters = <String, dynamic>{
-      'page': 1,
-      'pageSize': 8,
-      'type': reportType,
-      'unit': 1000,
-      'termtype': periodType,
-    };
-
-    if (reportType == 'LCTT') {
-      queryParameters['code'] = symbol.toUpperCase();
-      queryParameters['termType'] = periodType;
-    } else {
-      queryParameters['languageid'] = 1;
-    }
+    final itemCodes = lineItems.values.join(',');
 
     final response = await _dio.get(
-      '${ApiConstants.kbsFinanceInfo}/${symbol.toUpperCase()}',
-      queryParameters: queryParameters,
-      options: Options(headers: {'User-Agent': 'Mozilla/5.0'}),
+      _financialStatementsUrl,
+      queryParameters: {
+        'q': 'code:${symbol.toUpperCase()}~reportType:$reportType~modelType:2',
+        'sort': 'reportDate:desc',
+        'size': 40,
+        'filter': 'itemCode:$itemCodes',
+      },
     );
 
-    return Map<String, dynamic>.from(response.data as Map);
-  }
+    final data = response.data['data'] as List? ?? [];
+    if (data.isEmpty) return [];
 
-  List<FinancialStatement> _buildStatements({
-    required String symbol,
-    required StatementType type,
-    required List<String> periods,
-    required List<Map<String, dynamic>> rows,
-    required Map<String, List<String>> linePatterns,
-    Set<String> negativeLabels = const {},
-  }) {
-    if (periods.isEmpty || rows.isEmpty) {
-      return [];
+    // Group by reportDate
+    final periodMap = <String, Map<String, double>>{};
+    for (final row in data) {
+      final item = row as Map<String, dynamic>;
+      final reportDate = item['reportDate'] as String? ?? '';
+      final fiscalDate = item['fiscalDate'] as String? ?? reportDate;
+      final itemCode = item['itemCode'] as String? ?? '';
+      final value = _toDouble(item['numericValue']) * 1e6; // API trả đơn vị triệu
+
+      final period = _formatPeriod(fiscalDate, reportDate);
+      periodMap.putIfAbsent(period, () => {});
+
+      // Map itemCode → label tiếng Việt
+      for (final entry in lineItems.entries) {
+        if (entry.value == itemCode) {
+          periodMap[period]![entry.key] = value;
+          break;
+        }
+      }
     }
 
-    return List.generate(periods.length, (index) {
-      final columnKey = 'Value${index + 1}';
-      final items = <String, double>{};
+    // Sắp xếp theo thời gian mới nhất
+    final sortedPeriods = periodMap.keys.toList()..sort((a, b) => b.compareTo(a));
 
-      for (final entry in linePatterns.entries) {
-        var value = _extractStatementValue(rows, columnKey, entry.value);
-        if (entry.key == 'Tài sản dài hạn' && value == 0) {
-          value =
-              (items['Tổng tài sản'] ?? 0) - (items['Tài sản ngắn hạn'] ?? 0);
-        }
-        if (negativeLabels.contains(entry.key)) {
-          value = -value.abs();
-        }
-        items[entry.key] = value;
-      }
-
+    return sortedPeriods.take(8).map((period) {
       return FinancialStatement(
         symbol: symbol.toUpperCase(),
-        period: periods[index],
-        type: type,
-        items: items,
+        period: period,
+        type: statementType,
+        items: periodMap[period]!,
       );
-    });
-  }
-
-  List<Map<String, dynamic>> _extractRows(
-    Map<String, dynamic> data,
-    String key,
-  ) {
-    final content = data['Content'] as Map<String, dynamic>? ?? const {};
-    final rows = content[key] as List? ?? const [];
-    return rows.map((item) => Map<String, dynamic>.from(item as Map)).toList();
-  }
-
-  List<String> _extractPeriods(List heads) {
-    return heads.map<String>((item) {
-      final head = Map<String, dynamic>.from(item as Map);
-      final year = head['YearPeriod']?.toString() ?? '';
-      final termName = head['TermName']?.toString() ?? '';
-
-      if (termName.contains('Quý')) {
-        final quarter = termName.replaceAll('Quý', '').trim();
-        return 'Q$quarter/$year';
-      }
-      return year;
     }).toList();
   }
 
-  double _extractStatementValue(
-    List<Map<String, dynamic>> rows,
-    String columnKey,
-    List<String> patterns,
-  ) {
-    for (final row in rows) {
-      final name = (row['Name'] as String? ?? '').toLowerCase();
-      if (!patterns.any((pattern) => name.contains(pattern.toLowerCase()))) {
-        continue;
-      }
+  String _formatPeriod(String fiscalDate, String reportDate) {
+    // fiscalDate format: "YYYY-MM-DD"
+    final date = fiscalDate.isNotEmpty ? fiscalDate : reportDate;
+    if (date.length < 7) return date;
 
-      final raw = row[columnKey];
-      return _toDouble(raw) * 1000;
-    }
+    final year = date.substring(0, 4);
+    final month = int.tryParse(date.substring(5, 7)) ?? 0;
 
-    return 0;
+    final quarter = switch (month) {
+      >= 1 && <= 3 => 'Q1',
+      >= 4 && <= 6 => 'Q2',
+      >= 7 && <= 9 => 'Q3',
+      _ => 'Q4',
+    };
+
+    return '$quarter/$year';
   }
 
-  Future<_IndustryContext?> _resolveIndustry(String symbol) {
-    return _industryCache.putIfAbsent(symbol, () async {
-      final response = await _dio.get(
-        ApiConstants.kbsSectorAll,
-        options: Options(headers: {'User-Agent': 'Mozilla/5.0'}),
-      );
+  // --- Private: Industry Comparison ---
 
-      final sectors = response.data as List? ?? const [];
-      for (final item in sectors) {
-        final sector = Map<String, dynamic>.from(item as Map);
-        final code = _toInt(sector['code']);
-        final symbols = await _getSectorSymbols(code);
-        if (!symbols.contains(symbol)) {
-          continue;
-        }
-
-        return _IndustryContext(
-          code: code,
-          name: sector['name'] as String? ?? 'Khác',
-          symbols: symbols,
-        );
-      }
-
-      return null;
-    });
-  }
-
-  Future<List<String>> _getSectorSymbols(int sectorCode) {
-    return _sectorSymbolsCache.putIfAbsent(sectorCode, () async {
-      final response = await _dio.get(
-        ApiConstants.kbsSectorStock,
-        queryParameters: {'code': sectorCode, 'l': 1},
-        options: Options(headers: {'User-Agent': 'Mozilla/5.0'}),
-      );
-
-      final payload = response.data;
-      if (payload is Map<String, dynamic> && payload['stocks'] is List) {
-        return (payload['stocks'] as List)
-            .map((item) => ((item as Map)['sb'] as String? ?? '').toUpperCase())
-            .where((symbol) => symbol.isNotEmpty)
-            .toList();
-      }
-      if (payload is Map<String, dynamic> && payload['data'] is List) {
-        return (payload['data'] as List)
-            .map((item) => item.toString().toUpperCase())
-            .where((symbol) => symbol.isNotEmpty)
-            .toList();
-      }
-      if (payload is List) {
-        return payload
-            .map((item) => item.toString().toUpperCase())
-            .where((symbol) => symbol.isNotEmpty)
-            .toList();
-      }
-
-      return <String>[];
-    });
-  }
-
-  Future<Map<String, double>> _fetchMarketCaps(List<String> symbols) async {
-    final marketCaps = <String, double>{};
-
-    for (final chunk in _chunk(symbols, 50)) {
-      final response = await _dio.get(
-        ApiConstants.ratios,
-        queryParameters: {
-          'filter': 'code:${chunk.join(",")}',
-          'where': 'itemCode:${ApiConstants.ratioMarketCap}',
-          'order': 'reportDate',
-          'size': chunk.length,
-        },
-      );
-
-      final data = response.data['data'] as List? ?? const [];
-      for (final item in data) {
-        final row = Map<String, dynamic>.from(item as Map);
-        final code = (row['code'] as String? ?? '').toUpperCase();
-        if (code.isEmpty) {
-          continue;
-        }
-        marketCaps[code] = _toDouble(row['value']) / 1e9;
-      }
-    }
-
-    return marketCaps;
-  }
-
-  Future<Map<String, String>> _fetchCompanyNames(List<String> symbols) async {
-    final companyNames = <String, String>{};
-
-    for (final chunk in _chunk(symbols, 50)) {
+  Future<Map<String, dynamic>> _fetchStockInfo(String symbol) async {
+    try {
       final response = await _dio.get(
         ApiConstants.stocks,
         queryParameters: {
-          'q': 'type:STOCK~status:listed~code:${chunk.join(",")}',
-          'size': chunk.length,
+          'q': 'code:$symbol~type:STOCK',
+          'size': 1,
         },
       );
-
-      final data = response.data['data'] as List? ?? const [];
-      for (final item in data) {
-        final row = Map<String, dynamic>.from(item as Map);
-        final code = (row['code'] as String? ?? '').toUpperCase();
-        if (code.isEmpty) {
-          continue;
-        }
-        companyNames[code] =
-            (row['companyNameEng'] as String?) ??
-            (row['companyName'] as String?) ??
-            code;
-      }
-    }
-
-    return companyNames;
+      final data = response.data['data'] as List? ?? [];
+      if (data.isNotEmpty) return Map<String, dynamic>.from(data.first as Map);
+    } catch (_) {}
+    return {};
   }
 
-  Future<_PeerMetrics> _getPeerMetrics(String symbol) {
-    return _peerMetricCache.putIfAbsent(symbol, () async {
-      final data = await _fetchFinanceInfo(
-        symbol: symbol,
-        reportType: 'CSTC',
-        periodType: 1,
+  Future<List<String>> _fetchIndustryPeers(String industryCode) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.stocks,
+        queryParameters: {
+          'q': 'type:STOCK~status:listed~industryCode:$industryCode',
+          'size': 100,
+        },
       );
+      final data = response.data['data'] as List? ?? [];
+      return data
+          .map((item) => ((item as Map)['code'] as String? ?? '').toUpperCase())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
 
-      final rows = <Map<String, dynamic>>[];
-      final content = data['Content'] as Map<String, dynamic>? ?? const {};
-      for (final value in content.values) {
-        final groupRows = value as List? ?? const [];
-        rows.addAll(
-          groupRows
-              .map((item) => Map<String, dynamic>.from(item as Map))
-              .toList(),
+  Future<Map<String, double>> _fetchMarketCaps(List<String> symbols) async {
+    final caps = <String, double>{};
+    for (final chunk in _chunk(symbols, 50)) {
+      try {
+        final response = await _dio.get(
+          ApiConstants.ratios,
+          queryParameters: {
+            'filter': 'code:${chunk.join(",")}',
+            'where': 'itemCode:${ApiConstants.ratioMarketCap}',
+            'order': 'reportDate',
+            'size': chunk.length,
+          },
         );
-      }
-
-      return _PeerMetrics(
-        pe: _extractRatio(rows, viPatterns: ['(P/E)'], enPatterns: ['P/E']),
-        pb: _extractRatio(rows, viPatterns: ['(P/B)'], enPatterns: ['P/B']),
-        roe: _extractRatio(rows, viPatterns: ['(ROEA)'], enPatterns: ['ROE']),
-        roa: _extractRatio(rows, viPatterns: ['(ROAA)'], enPatterns: ['ROA']),
-        debtToEquity: _extractRatio(
-          rows,
-          viPatterns: ['Tỷ số Nợ trên Vốn chủ sở hữu'],
-          enPatterns: ['Liabilities to equity', 'Debt to equity'],
-        ),
-      );
-    });
+        final data = response.data['data'] as List? ?? [];
+        for (final item in data) {
+          final row = item as Map<String, dynamic>;
+          final code = (row['code'] as String? ?? '').toUpperCase();
+          if (code.isNotEmpty) {
+            caps[code] = _toDouble(row['value']) / 1e9;
+          }
+        }
+      } catch (_) {}
+    }
+    return caps;
   }
 
-  double _extractRatio(
-    List<Map<String, dynamic>> rows, {
-    required List<String> viPatterns,
-    required List<String> enPatterns,
-  }) {
-    for (final row in rows) {
-      final name = (row['Name'] as String? ?? '').toLowerCase();
-      final nameEn = (row['NameEn'] as String? ?? '').toLowerCase();
-      final matchesVi = viPatterns.any(
-        (pattern) => name.contains(pattern.toLowerCase()),
-      );
-      final matchesEn = enPatterns.any(
-        (pattern) => nameEn.contains(pattern.toLowerCase()),
-      );
-
-      if (!matchesVi && !matchesEn) {
-        continue;
-      }
-
-      for (var index = 1; index <= 4; index++) {
-        final raw = row['Value$index'];
-        if (raw != null) {
-          return _toDouble(raw);
+  Future<Map<String, String>> _fetchCompanyNames(List<String> symbols) async {
+    final names = <String, String>{};
+    for (final chunk in _chunk(symbols, 50)) {
+      try {
+        final response = await _dio.get(
+          ApiConstants.stocks,
+          queryParameters: {
+            'q': 'type:STOCK~status:listed~code:${chunk.join(",")}',
+            'size': chunk.length,
+          },
+        );
+        final data = response.data['data'] as List? ?? [];
+        for (final item in data) {
+          final row = item as Map<String, dynamic>;
+          final code = (row['code'] as String? ?? '').toUpperCase();
+          if (code.isNotEmpty) {
+            names[code] = (row['companyName'] as String?) ?? code;
+          }
         }
-      }
+      } catch (_) {}
+    }
+    return names;
+  }
+
+  Future<Map<String, Map<String, double>>> _fetchRatios(
+    List<String> symbols,
+  ) async {
+    final result = <String, Map<String, double>>{};
+    final ratioCodes = [
+      ApiConstants.ratioPE,
+      ApiConstants.ratioPB,
+    ];
+
+    for (final chunk in _chunk(symbols, 20)) {
+      try {
+        final response = await _dio.get(
+          ApiConstants.ratios,
+          queryParameters: {
+            'filter': 'code:${chunk.join(",")}',
+            'where': 'itemCode:${ratioCodes.join(",")}',
+            'order': 'reportDate',
+            'size': chunk.length * ratioCodes.length,
+          },
+        );
+        final data = response.data['data'] as List? ?? [];
+        for (final item in data) {
+          final row = item as Map<String, dynamic>;
+          final code = (row['code'] as String? ?? '').toUpperCase();
+          final itemCode = row['itemCode'] as String? ?? '';
+          final value = _toDouble(row['value']);
+
+          result.putIfAbsent(code, () => {});
+          if (itemCode == ApiConstants.ratioPE) result[code]!['pe'] = value;
+          if (itemCode == ApiConstants.ratioPB) result[code]!['pb'] = value;
+        }
+      } catch (_) {}
     }
 
-    return 0;
+    return result;
   }
 
-  List<String> _selectPeerSymbols(
+  List<String> _selectTopPeers(
     List<String> symbols,
-    String targetSymbol,
+    String target,
     Map<String, double> marketCaps,
   ) {
-    final ordered = [...symbols]
+    final sorted = [...symbols]
       ..sort((a, b) => (marketCaps[b] ?? 0).compareTo(marketCaps[a] ?? 0));
 
-    final selected = ordered.take(10).toList();
-    if (!selected.contains(targetSymbol)) {
-      if (selected.length == 10) {
-        selected.removeLast();
-      }
-      selected.add(targetSymbol);
+    final selected = sorted.take(10).toList();
+    if (!selected.contains(target)) {
+      if (selected.length >= 10) selected.removeLast();
+      selected.add(target);
     }
-
-    selected.sort((a, b) => (marketCaps[b] ?? 0).compareTo(marketCaps[a] ?? 0));
-    return _dedupeSymbols(selected);
+    return selected;
   }
 
-  List<String> _dedupeSymbols(List<String> symbols) {
-    final deduped = <String>[];
-    final seen = <String>{};
-
-    for (final symbol in symbols) {
-      final value = symbol.trim().toUpperCase();
-      if (value.isNotEmpty && seen.add(value)) {
-        deduped.add(value);
-      }
+  Iterable<List<String>> _chunk(List<String> list, int size) sync* {
+    for (var i = 0; i < list.length; i += size) {
+      yield list.sublist(i, i + size > list.length ? list.length : i + size);
     }
-
-    return deduped;
-  }
-
-  Iterable<List<String>> _chunk(List<String> symbols, int size) sync* {
-    for (var index = 0; index < symbols.length; index += size) {
-      final end = index + size < symbols.length ? index + size : symbols.length;
-      yield symbols.sublist(index, end);
-    }
-  }
-
-  int _toInt(dynamic value) {
-    return _toDouble(value).round();
   }
 
   double _toDouble(dynamic value) {
-    if (value == null) {
-      return 0;
-    }
-    if (value is num) {
-      return value.toDouble();
-    }
+    if (value == null) return 0;
+    if (value is num) return value.toDouble();
     return double.tryParse(value.toString().replaceAll(',', '')) ?? 0;
   }
-}
-
-class _IndustryContext {
-  const _IndustryContext({
-    required this.code,
-    required this.name,
-    required this.symbols,
-  });
-
-  final int code;
-  final String name;
-  final List<String> symbols;
-}
-
-class _PeerMetrics {
-  const _PeerMetrics({
-    required this.pe,
-    required this.pb,
-    required this.roe,
-    required this.roa,
-    required this.debtToEquity,
-  });
-
-  final double pe;
-  final double pb;
-  final double roe;
-  final double roa;
-  final double debtToEquity;
 }

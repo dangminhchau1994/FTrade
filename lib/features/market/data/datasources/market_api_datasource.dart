@@ -400,6 +400,7 @@ class MarketApiDatasource {
     return data.map<Stock>((d) {
       final price = (d['close'] as num?)?.toDouble() ?? 0;
       final change = (d['change'] as num?)?.toDouble() ?? 0;
+      final basicPrice = (d['basicPrice'] as num?)?.toDouble() ?? price;
       return Stock(
         symbol: d['code'] as String,
         price: price * 1000,
@@ -408,8 +409,11 @@ class MarketApiDatasource {
         high: ((d['high'] as num?)?.toDouble() ?? price) * 1000,
         low: ((d['low'] as num?)?.toDouble() ?? price) * 1000,
         open: ((d['open'] as num?)?.toDouble() ?? price) * 1000,
-        prevClose: ((d['basicPrice'] as num?)?.toDouble() ?? price) * 1000,
+        prevClose: basicPrice * 1000,
         volume: (d['nmVolume'] as num?)?.toInt() ?? 0,
+        ceiling: ((d['ceilingPrice'] as num?)?.toDouble() ?? 0) * 1000,
+        floor: ((d['floorPrice'] as num?)?.toDouble() ?? 0) * 1000,
+        refPrice: basicPrice * 1000,
         exchange: (d['floor'] as String?) ?? 'HOSE',
         updatedAt: DateTime.now(),
       );

@@ -30,6 +30,9 @@ mixin _$Stock {
   double get open => throw _privateConstructorUsedError;
   double get prevClose => throw _privateConstructorUsedError;
   int get volume => throw _privateConstructorUsedError;
+  double get ceiling => throw _privateConstructorUsedError;
+  double get floor => throw _privateConstructorUsedError;
+  double get refPrice => throw _privateConstructorUsedError;
   String? get exchange => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
 
@@ -57,6 +60,9 @@ abstract class $StockCopyWith<$Res> {
     double open,
     double prevClose,
     int volume,
+    double ceiling,
+    double floor,
+    double refPrice,
     String? exchange,
     DateTime? updatedAt,
   });
@@ -86,6 +92,9 @@ class _$StockCopyWithImpl<$Res, $Val extends Stock>
     Object? open = null,
     Object? prevClose = null,
     Object? volume = null,
+    Object? ceiling = null,
+    Object? floor = null,
+    Object? refPrice = null,
     Object? exchange = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -136,6 +145,21 @@ class _$StockCopyWithImpl<$Res, $Val extends Stock>
                     ? _value.volume
                     : volume // ignore: cast_nullable_to_non_nullable
                         as int,
+            ceiling:
+                null == ceiling
+                    ? _value.ceiling
+                    : ceiling // ignore: cast_nullable_to_non_nullable
+                        as double,
+            floor:
+                null == floor
+                    ? _value.floor
+                    : floor // ignore: cast_nullable_to_non_nullable
+                        as double,
+            refPrice:
+                null == refPrice
+                    ? _value.refPrice
+                    : refPrice // ignore: cast_nullable_to_non_nullable
+                        as double,
             exchange:
                 freezed == exchange
                     ? _value.exchange
@@ -170,6 +194,9 @@ abstract class _$$StockImplCopyWith<$Res> implements $StockCopyWith<$Res> {
     double open,
     double prevClose,
     int volume,
+    double ceiling,
+    double floor,
+    double refPrice,
     String? exchange,
     DateTime? updatedAt,
   });
@@ -198,6 +225,9 @@ class __$$StockImplCopyWithImpl<$Res>
     Object? open = null,
     Object? prevClose = null,
     Object? volume = null,
+    Object? ceiling = null,
+    Object? floor = null,
+    Object? refPrice = null,
     Object? exchange = freezed,
     Object? updatedAt = freezed,
   }) {
@@ -248,6 +278,21 @@ class __$$StockImplCopyWithImpl<$Res>
                 ? _value.volume
                 : volume // ignore: cast_nullable_to_non_nullable
                     as int,
+        ceiling:
+            null == ceiling
+                ? _value.ceiling
+                : ceiling // ignore: cast_nullable_to_non_nullable
+                    as double,
+        floor:
+            null == floor
+                ? _value.floor
+                : floor // ignore: cast_nullable_to_non_nullable
+                    as double,
+        refPrice:
+            null == refPrice
+                ? _value.refPrice
+                : refPrice // ignore: cast_nullable_to_non_nullable
+                    as double,
         exchange:
             freezed == exchange
                 ? _value.exchange
@@ -276,6 +321,9 @@ class _$StockImpl implements _Stock {
     required this.open,
     required this.prevClose,
     required this.volume,
+    this.ceiling = 0,
+    this.floor = 0,
+    this.refPrice = 0,
     this.exchange,
     this.updatedAt,
   });
@@ -302,13 +350,22 @@ class _$StockImpl implements _Stock {
   @override
   final int volume;
   @override
+  @JsonKey()
+  final double ceiling;
+  @override
+  @JsonKey()
+  final double floor;
+  @override
+  @JsonKey()
+  final double refPrice;
+  @override
   final String? exchange;
   @override
   final DateTime? updatedAt;
 
   @override
   String toString() {
-    return 'Stock(symbol: $symbol, price: $price, change: $change, changePercent: $changePercent, high: $high, low: $low, open: $open, prevClose: $prevClose, volume: $volume, exchange: $exchange, updatedAt: $updatedAt)';
+    return 'Stock(symbol: $symbol, price: $price, change: $change, changePercent: $changePercent, high: $high, low: $low, open: $open, prevClose: $prevClose, volume: $volume, ceiling: $ceiling, floor: $floor, refPrice: $refPrice, exchange: $exchange, updatedAt: $updatedAt)';
   }
 
   @override
@@ -327,6 +384,10 @@ class _$StockImpl implements _Stock {
             (identical(other.prevClose, prevClose) ||
                 other.prevClose == prevClose) &&
             (identical(other.volume, volume) || other.volume == volume) &&
+            (identical(other.ceiling, ceiling) || other.ceiling == ceiling) &&
+            (identical(other.floor, floor) || other.floor == floor) &&
+            (identical(other.refPrice, refPrice) ||
+                other.refPrice == refPrice) &&
             (identical(other.exchange, exchange) ||
                 other.exchange == exchange) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -346,6 +407,9 @@ class _$StockImpl implements _Stock {
     open,
     prevClose,
     volume,
+    ceiling,
+    floor,
+    refPrice,
     exchange,
     updatedAt,
   );
@@ -375,6 +439,9 @@ abstract class _Stock implements Stock {
     required final double open,
     required final double prevClose,
     required final int volume,
+    final double ceiling,
+    final double floor,
+    final double refPrice,
     final String? exchange,
     final DateTime? updatedAt,
   }) = _$StockImpl;
@@ -399,6 +466,12 @@ abstract class _Stock implements Stock {
   double get prevClose;
   @override
   int get volume;
+  @override
+  double get ceiling;
+  @override
+  double get floor;
+  @override
+  double get refPrice;
   @override
   String? get exchange;
   @override

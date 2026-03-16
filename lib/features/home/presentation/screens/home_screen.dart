@@ -92,7 +92,7 @@ class HomeScreen extends ConsumerWidget {
                                 size: 20,
                               ),
                               Text(
-                                '${FormatUtils.change(idx.change)} (${FormatUtils.percent(idx.changePercent)})',
+                                FormatUtils.changeWithPercent(idx.change, idx.changePercent),
                                 style: TextStyle(
                                   color: isUp
                                       ? AppTheme.gainColor
@@ -174,6 +174,9 @@ class HomeScreen extends ConsumerWidget {
                         change: s.change,
                         changePercent: s.changePercent,
                         volume: s.volume,
+                        ceiling: s.ceiling,
+                        floor: s.floor,
+                        refPrice: s.refPrice,
                         onTap: () => context.push('/stock/${s.symbol}'),
                       ),
                     )

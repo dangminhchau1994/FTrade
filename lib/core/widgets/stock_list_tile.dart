@@ -11,6 +11,9 @@ class StockListTile extends ConsumerWidget {
   final double change;
   final double changePercent;
   final int volume;
+  final double? ceiling;
+  final double? floor;
+  final double? refPrice;
   final VoidCallback? onTap;
 
   const StockListTile({
@@ -20,36 +23,48 @@ class StockListTile extends ConsumerWidget {
     required this.change,
     required this.changePercent,
     required this.volume,
+    this.ceiling,
+    this.floor,
+    this.refPrice,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Overlay realtime data nếu có, fallback về REST data
     final realtime = ref.watch(realtimeStockProvider(symbol));
+    final hasRt = realtime != null && realtime.matchedPrice > 0;
 
-    final displayPrice =
-        realtime != null && realtime.matchedPrice > 0
-            ? realtime.matchedPrice
-            : price;
-    final displayChange =
-        realtime != null && realtime.matchedPrice > 0
-            ? realtime.change
-            : change;
-    final displayChangePercent =
-        realtime != null && realtime.matchedPrice > 0
-            ? realtime.changePercent
-            : changePercent;
-    final displayVolume =
-        realtime != null && realtime.totalVolume > 0
-            ? realtime.totalVolume
-            : volume;
+    final displayPrice = hasRt ? realtime.matchedPrice : price;
+    final displayChange = hasRt ? realtime.change : change;
+    final displayChangePercent = hasRt ? realtime.changePercent : changePercent;
+    final displayVolume = hasRt && realtime.totalVolume > 0
+        ? realtime.totalVolume
+        : volume;
 
-    final color = displayChange > 0
-        ? AppTheme.gainColor
-        : displayChange < 0
-            ? AppTheme.lossColor
-            : Colors.grey;
+    // Dùng ceiling/floor/ref từ realtime nếu có, fallback về props
+    final displayCeiling = hasRt && realtime.ceiling > 0
+        ? realtime.ceiling
+        : ceiling ?? 0;
+    final displayFloor = hasRt && realtime.floor > 0
+        ? realtime.floor
+        : floor ?? 0;
+    final displayRef = hasRt && realtime.refPrice > 0
+        ? realtime.refPrice
+        : refPrice ?? 0;
+
+    // Màu theo chuẩn TTCK VN nếu có đủ thông tin trần/sàn/TC
+    final color = (displayCeiling > 0 && displayFloor > 0 && displayRef > 0)
+        ? AppTheme.stockColor(
+            price: displayPrice,
+            ceiling: displayCeiling,
+            floor: displayFloor,
+            refPrice: displayRef,
+          )
+        : displayChange > 0
+            ? AppTheme.gainColor
+            : displayChange < 0
+                ? AppTheme.lossColor
+                : Colors.grey;
 
     return InkWell(
       onTap: onTap,
@@ -89,7 +104,7 @@ class StockListTile extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${FormatUtils.change(displayChange)} (${FormatUtils.percent(displayChangePercent)})',
+                  FormatUtils.changeWithPercent(displayChange, displayChangePercent),
                   style: TextStyle(
                     color: color,
                     fontSize: 12,

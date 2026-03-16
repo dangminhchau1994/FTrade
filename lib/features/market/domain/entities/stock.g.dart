@@ -16,6 +16,9 @@ _$StockImpl _$$StockImplFromJson(Map<String, dynamic> json) => _$StockImpl(
   open: (json['open'] as num).toDouble(),
   prevClose: (json['prevClose'] as num).toDouble(),
   volume: (json['volume'] as num).toInt(),
+  ceiling: (json['ceiling'] as num?)?.toDouble() ?? 0,
+  floor: (json['floor'] as num?)?.toDouble() ?? 0,
+  refPrice: (json['refPrice'] as num?)?.toDouble() ?? 0,
   exchange: json['exchange'] as String?,
   updatedAt:
       json['updatedAt'] == null
@@ -34,6 +37,9 @@ Map<String, dynamic> _$$StockImplToJson(_$StockImpl instance) =>
       'open': instance.open,
       'prevClose': instance.prevClose,
       'volume': instance.volume,
+      'ceiling': instance.ceiling,
+      'floor': instance.floor,
+      'refPrice': instance.refPrice,
       'exchange': instance.exchange,
       'updatedAt': instance.updatedAt?.toIso8601String(),
     };

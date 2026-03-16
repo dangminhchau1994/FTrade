@@ -15,6 +15,9 @@ class Stock with _$Stock {
     required double open,
     required double prevClose,
     required int volume,
+    @Default(0) double ceiling,
+    @Default(0) double floor,
+    @Default(0) double refPrice,
     String? exchange,
     DateTime? updatedAt,
   }) = _Stock;

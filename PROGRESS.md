@@ -24,6 +24,14 @@
   - NewsScreen: filter theo mã CP (bottom sheet)
   - NewsDetailScreen: share (copy link), bookmark (Hive storage)
   - StockDetailScreen: share (copy thông tin CP)
+- [x] StockFormat extension (giá nghìn đồng: 149800 → "149.80", change: "9.80 / 7.00%")
+- [x] Màu sắc chuẩn TTCK VN (tím=trần, xanh lá=tăng, vàng=TC, đỏ=giảm, xanh dương=sàn)
+  - AppTheme.stockColor() dựa trên ceiling/floor/refPrice
+  - Áp dụng cho StockDetailScreen, StockListTile, StockChangeText
+
+### Known Issues
+- [ ] BCTC (KQKD, CĐKT, LCTT) API: KBS API chết, VNDirect /financial_statements trả 500, TCBS 404. Đang tìm API thay thế (Vietstock finance cần session cookie). fundamental_api_datasource.dart đã rewrite sang VNDirect nhưng chưa hoạt động.
+- [ ] Industry comparison: rewrite sang VNDirect stocks API, cần test lại
 
 ---
 

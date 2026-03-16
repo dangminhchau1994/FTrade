@@ -84,6 +84,9 @@ class WatchlistScreen extends ConsumerWidget {
                         change: s.change,
                         changePercent: s.changePercent,
                         volume: s.volume,
+                        ceiling: s.ceiling,
+                        floor: s.floor,
+                        refPrice: s.refPrice,
                         onTap: () => context.push('/stock/${s.symbol}'),
                       ),
                     );

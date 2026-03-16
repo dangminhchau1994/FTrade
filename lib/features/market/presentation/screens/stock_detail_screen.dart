@@ -86,8 +86,12 @@ class StockDetailScreen extends ConsumerWidget {
           final displayForeignSell = hasRt ? rt.foreignSellVolume : (stock.foreignSell?.toInt() ?? 0);
           final displayUpdatedAt = hasRt ? rt.updatedAt : stock.updatedAt;
 
-          final isUp = displayChange >= 0;
-          final color = isUp ? AppTheme.gainColor : AppTheme.lossColor;
+          final color = AppTheme.stockColor(
+            price: displayPrice,
+            ceiling: displayCeiling,
+            floor: displayFloor,
+            refPrice: displayRef,
+          );
 
           return ListView(
             children: [
@@ -120,7 +124,7 @@ class StockDetailScreen extends ConsumerWidget {
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Text(
-                            '${FormatUtils.change(displayChange)} (${FormatUtils.percent(displayChangePct)})',
+                            FormatUtils.changeWithPercent(displayChange, displayChangePct),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
