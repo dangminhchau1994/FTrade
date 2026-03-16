@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,17 +14,44 @@ class NewsDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final article = ref.watch(newsDetailProvider(id));
+    final bookmarks = ref.watch(bookmarkedNewsProvider);
+    final isBookmarked = bookmarks.contains(id);
 
     return Scaffold(
       appBar: AppBar(
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: () {},
+            onPressed: () {
+              article.whenData((a) {
+                final url = a.url ?? '';
+                final text = '${a.title}\n$url';
+                Clipboard.setData(ClipboardData(text: text));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã copy link bài viết')),
+                );
+              });
+            },
           ),
           IconButton(
-            icon: const Icon(Icons.bookmark_outline),
-            onPressed: () {},
+            icon: Icon(
+              isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
+              color: isBookmarked ? Colors.amber : null,
+            ),
+            onPressed: () {
+              final notifier = ref.read(bookmarkedNewsProvider.notifier);
+              if (isBookmarked) {
+                notifier.remove(id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã bỏ lưu bài viết')),
+                );
+              } else {
+                notifier.add(id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã lưu bài viết')),
+                );
+              }
+            },
           ),
         ],
       ),

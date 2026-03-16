@@ -1,6 +1,6 @@
 # FTrade - Progress Tracker
 
-## Phase 1: Nền tảng dữ liệu (đang triển khai)
+## Phase 1: Nền tảng dữ liệu ✅ DONE
 
 ### 2026-03-14 - Khởi tạo dự án
 - [x] Setup Flutter project, cấu trúc thư mục
@@ -8,11 +8,22 @@
 - [x] Tích hợp live market data APIs (giá, khối lượng)
 - [x] Tích hợp news APIs (tin tức thị trường)
 - [x] Thay toàn bộ mock data bằng API thật
+- [x] Thu thập thông tin cổ tức, chốt quyền (Vietstock Finance API)
+- [x] Lịch sự kiện doanh nghiệp (dividend, AGM, rights issue)
 
-### TODO - Phase 1 còn lại
-- [ ] Thu thập thông tin cổ tức, chốt quyền
-- [ ] Lịch sự kiện doanh nghiệp
-- [ ] Hoàn thiện dữ liệu giá & khối lượng giao dịch lịch sử
+### 2026-03-16 - WebSocket realtime & UI wiring
+- [x] WebSocket module (auto-reconnect, heartbeat, status stream)
+- [x] RealtimeMarketData model (giá, KL, change, bid/ask 3 bước, ATO/ATC, NN)
+- [x] MarketDataController (Riverpod StateNotifier)
+- [x] Wire realtime vào StockListTile (tự động overlay tất cả screens)
+- [x] Wire realtime vào StockDetailScreen (bid/ask table, Live badge)
+- [x] Auto-connect WebSocket khi app start, pause/resume lifecycle
+- [x] SSI WebSocket constants trong ApiConstants
+- [x] Gắn handler cho 7 empty buttons:
+  - HomeScreen: notification → watchlist, "Xem tất cả" → market/news
+  - NewsScreen: filter theo mã CP (bottom sheet)
+  - NewsDetailScreen: share (copy link), bookmark (Hive storage)
+  - StockDetailScreen: share (copy thông tin CP)
 
 ---
 

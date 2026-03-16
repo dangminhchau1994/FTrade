@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -50,7 +51,18 @@ class StockDetailScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.share),
-            onPressed: () {},
+            onPressed: () {
+              detail.whenData((stock) {
+                final text = '$symbol - ${stock.companyName}\n'
+                    'Giá: ${FormatUtils.price(stock.price)} '
+                    '(${FormatUtils.change(stock.change)} / ${FormatUtils.percent(stock.changePercent)})\n'
+                    'KL: ${FormatUtils.volume(stock.volume)}';
+                Clipboard.setData(ClipboardData(text: text));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã copy thông tin cổ phiếu')),
+                );
+              });
+            },
           ),
         ],
       ),

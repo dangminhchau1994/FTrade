@@ -28,7 +28,7 @@ class HomeScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
+            onPressed: () => context.push('/watchlist'),
           ),
         ],
       ),
@@ -162,7 +162,7 @@ class HomeScreen extends ConsumerWidget {
             ),
 
             // Top Gainers
-            _SectionHeader(title: 'Top tăng giá', onViewAll: () {}),
+            _SectionHeader(title: 'Top tăng giá', onViewAll: () => context.go('/market')),
             topGainers.when(
               data: (stocks) => Column(
                 children: stocks
@@ -192,7 +192,7 @@ class HomeScreen extends ConsumerWidget {
             const Divider(height: 1),
 
             // Latest News
-            _SectionHeader(title: 'Tin tức mới nhất', onViewAll: () {}),
+            _SectionHeader(title: 'Tin tức mới nhất', onViewAll: () => context.go('/news')),
             latestNews.when(
               data: (articles) => Column(
                 children: articles
