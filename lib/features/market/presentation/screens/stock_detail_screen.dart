@@ -4,9 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/format_utils.dart';
+import '../../domain/entities/realtime_market_data.dart';
 import '../../../watchlist/presentation/providers/price_alert_providers.dart';
 import '../../../watchlist/presentation/providers/watchlist_providers.dart';
 import '../../../watchlist/presentation/widgets/add_alert_dialog.dart';
+import '../providers/market_data_controller.dart';
 import '../providers/market_providers.dart';
 import '../widgets/stock_chart.dart';
 
@@ -18,6 +20,7 @@ class StockDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(stockDetailProvider(symbol));
+    final realtime = ref.watch(realtimeStockProvider(symbol));
     final watchlist = ref.watch(watchlistSymbolsProvider);
     final isInWatchlist = watchlist.contains(symbol);
 
@@ -53,7 +56,25 @@ class StockDetailScreen extends ConsumerWidget {
       ),
       body: detail.when(
         data: (stock) {
-          final isUp = stock.change >= 0;
+          // Overlay realtime data lên REST data
+          final rt = realtime;
+          final hasRt = rt != null && rt.matchedPrice > 0;
+
+          final displayPrice = hasRt ? rt.matchedPrice : stock.price;
+          final displayChange = hasRt ? rt.change : stock.change;
+          final displayChangePct = hasRt ? rt.changePercent : stock.changePercent;
+          final displayHigh = hasRt && rt.high > 0 ? rt.high : stock.high;
+          final displayLow = hasRt && rt.low > 0 ? rt.low : stock.low;
+          final displayOpen = hasRt && rt.open > 0 ? rt.open : stock.open;
+          final displayVolume = hasRt && rt.totalVolume > 0 ? rt.totalVolume : stock.volume;
+          final displayCeiling = hasRt && rt.ceiling > 0 ? rt.ceiling : stock.ceiling;
+          final displayFloor = hasRt && rt.floor > 0 ? rt.floor : stock.floor;
+          final displayRef = hasRt && rt.refPrice > 0 ? rt.refPrice : stock.refPrice;
+          final displayForeignBuy = hasRt ? rt.foreignBuyVolume : (stock.foreignBuy?.toInt() ?? 0);
+          final displayForeignSell = hasRt ? rt.foreignSellVolume : (stock.foreignSell?.toInt() ?? 0);
+          final displayUpdatedAt = hasRt ? rt.updatedAt : stock.updatedAt;
+
+          final isUp = displayChange >= 0;
           final color = isUp ? AppTheme.gainColor : AppTheme.lossColor;
 
           return ListView(
@@ -76,7 +97,7 @@ class StockDetailScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          FormatUtils.price(stock.price),
+                          FormatUtils.price(displayPrice),
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
@@ -87,7 +108,7 @@ class StockDetailScreen extends ConsumerWidget {
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Text(
-                            '${FormatUtils.change(stock.change)} (${FormatUtils.percent(stock.changePercent)})',
+                            '${FormatUtils.change(displayChange)} (${FormatUtils.percent(displayChangePct)})',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -98,13 +119,40 @@ class StockDetailScreen extends ConsumerWidget {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '${stock.exchange} • ${FormatUtils.dateTime(stock.updatedAt ?? DateTime.now())}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    Row(
+                      children: [
+                        Text(
+                          '${stock.exchange} • ${FormatUtils.dateTime(displayUpdatedAt ?? DateTime.now())}',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        ),
+                        if (hasRt) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.green,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Live',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.green[400],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
+
+              // Bid/Ask table (chỉ hiện khi có realtime)
+              if (hasRt) _BidAskTable(data: rt),
 
               // Chart with period selector
               StockChart(symbol: symbol),
@@ -115,10 +163,10 @@ class StockDetailScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _PriceRangeBar(
-                  floor: stock.floor,
-                  ref: stock.refPrice,
-                  ceiling: stock.ceiling,
-                  current: stock.price,
+                  floor: displayFloor,
+                  ref: displayRef,
+                  ceiling: displayCeiling,
+                  current: displayPrice,
                 ),
               ),
 
@@ -128,20 +176,20 @@ class StockDetailScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _InfoGrid(items: [
-                  _InfoItem('Mở cửa', FormatUtils.price(stock.open)),
-                  _InfoItem('Cao nhất', FormatUtils.price(stock.high)),
-                  _InfoItem('Thấp nhất', FormatUtils.price(stock.low)),
-                  _InfoItem('TC', FormatUtils.price(stock.refPrice)),
-                  _InfoItem('Trần', FormatUtils.price(stock.ceiling)),
-                  _InfoItem('Sàn', FormatUtils.price(stock.floor)),
-                  _InfoItem('KL GD', FormatUtils.volume(stock.volume)),
+                  _InfoItem('Mở cửa', FormatUtils.price(displayOpen)),
+                  _InfoItem('Cao nhất', FormatUtils.price(displayHigh)),
+                  _InfoItem('Thấp nhất', FormatUtils.price(displayLow)),
+                  _InfoItem('TC', FormatUtils.price(displayRef)),
+                  _InfoItem('Trần', FormatUtils.price(displayCeiling)),
+                  _InfoItem('Sàn', FormatUtils.price(displayFloor)),
+                  _InfoItem('KL GD', FormatUtils.volume(displayVolume)),
                   _InfoItem(
                     'NN Mua',
-                    FormatUtils.volume(stock.foreignBuy?.toInt() ?? 0),
+                    FormatUtils.volume(displayForeignBuy),
                   ),
                   _InfoItem(
                     'NN Bán',
-                    FormatUtils.volume(stock.foreignSell?.toInt() ?? 0),
+                    FormatUtils.volume(displayForeignSell),
                   ),
                 ]),
               ),
@@ -407,6 +455,80 @@ class _PriceRangeBar extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _BidAskTable extends StatelessWidget {
+  final RealtimeMarketData data;
+
+  const _BidAskTable({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          // Bid (Mua)
+          Expanded(
+            child: Column(
+              children: [
+                _bidAskHeader('MUA', AppTheme.gainColor),
+                _bidAskRow(data.bid1Price, data.bid1Volume, AppTheme.gainColor),
+                _bidAskRow(data.bid2Price, data.bid2Volume, AppTheme.gainColor),
+                _bidAskRow(data.bid3Price, data.bid3Volume, AppTheme.gainColor),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Ask (Bán)
+          Expanded(
+            child: Column(
+              children: [
+                _bidAskHeader('BÁN', AppTheme.lossColor),
+                _bidAskRow(data.ask1Price, data.ask1Volume, AppTheme.lossColor),
+                _bidAskRow(data.ask2Price, data.ask2Volume, AppTheme.lossColor),
+                _bidAskRow(data.ask3Price, data.ask3Volume, AppTheme.lossColor),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bidAskHeader(String label, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _bidAskRow(double price, int volume, Color color) {
+    if (price <= 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            FormatUtils.price(price),
+            style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w500),
+          ),
+          Text(
+            FormatUtils.volume(volume),
+            style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+          ),
+        ],
+      ),
     );
   }
 }

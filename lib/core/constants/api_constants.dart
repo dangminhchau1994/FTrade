@@ -4,6 +4,11 @@ class ApiConstants {
   static const String vndirectBase = 'https://api-finfo.vndirect.com.vn/v4';
   static const String vietstockTvNew = 'https://api.vietstock.vn/tvnew';
   static const String vietstockFinanceBase = 'https://finance.vietstock.vn';
+
+  // SSI iBoard WebSocket (realtime market data)
+  static const String ssiWebSocketUrl =
+      'wss://wgateway-iboard.ssi.com.vn/graphql';
+  static const String ssiWebSocketProtocol = 'graphql-transport-ws';
   static const String kbsIisBase =
       'https://kbbuddywts.kbsec.com.vn/iis-server/investment';
   static const String kbsStockDataBase =

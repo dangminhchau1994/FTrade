@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/market/presentation/providers/market_data_controller.dart';
 import '../theme/app_theme.dart';
 import '../utils/format_utils.dart';
 
-class StockListTile extends StatelessWidget {
+class StockListTile extends ConsumerWidget {
   final String symbol;
   final double price;
   final double change;
@@ -22,10 +24,30 @@ class StockListTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final color = change > 0
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Overlay realtime data nếu có, fallback về REST data
+    final realtime = ref.watch(realtimeStockProvider(symbol));
+
+    final displayPrice =
+        realtime != null && realtime.matchedPrice > 0
+            ? realtime.matchedPrice
+            : price;
+    final displayChange =
+        realtime != null && realtime.matchedPrice > 0
+            ? realtime.change
+            : change;
+    final displayChangePercent =
+        realtime != null && realtime.matchedPrice > 0
+            ? realtime.changePercent
+            : changePercent;
+    final displayVolume =
+        realtime != null && realtime.totalVolume > 0
+            ? realtime.totalVolume
+            : volume;
+
+    final color = displayChange > 0
         ? AppTheme.gainColor
-        : change < 0
+        : displayChange < 0
             ? AppTheme.lossColor
             : Colors.grey;
 
@@ -47,7 +69,7 @@ class StockListTile extends StatelessWidget {
             ),
             Expanded(
               child: Text(
-                'KL: ${FormatUtils.volume(volume)}',
+                'KL: ${FormatUtils.volume(displayVolume)}',
                 style: TextStyle(
                   color: Colors.grey[500],
                   fontSize: 12,
@@ -58,7 +80,7 @@ class StockListTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  FormatUtils.price(price),
+                  FormatUtils.price(displayPrice),
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.bold,
@@ -67,7 +89,7 @@ class StockListTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${FormatUtils.change(change)} (${FormatUtils.percent(changePercent)})',
+                  '${FormatUtils.change(displayChange)} (${FormatUtils.percent(displayChangePercent)})',
                   style: TextStyle(
                     color: color,
                     fontSize: 12,
