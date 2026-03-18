@@ -16,7 +16,11 @@ class ApiConstants {
   static const String stocks = '$vndirectBase/stocks';
 
   // Financial ratios (PE, PB, Market Cap, EPS, etc.)
-  static const String ratios = '$vndirectBase/ratios/latest';
+  static const String ratios = '$vndirectBase/ratios';
+
+  // Financial statements (IS, BS, CF)
+  static const String financialStatements =
+      '$vndirectBase/financial_statements';
 
   // Vietstock Finance pages/endpoints
   static const String vietstockMoneyFlowPage =

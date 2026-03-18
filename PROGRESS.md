@@ -29,9 +29,17 @@
   - AppTheme.stockColor() dựa trên ceiling/floor/refPrice
   - Áp dụng cho StockDetailScreen, StockListTile, StockChangeText
 
+### 2026-03-17 - Fix BCTC & Industry Comparison APIs
+- [x] Fix BCTC API: VNDirect /financial_statements hoạt động, phát hiện đúng mapping:
+  - modelType 1=BS (BCĐKT), 2=IS (BCKQKD), 3=CF (LCTT) — cũ mapping ngược
+  - reportType QUARTER = quý đơn lẻ hợp nhất, QUARTER2 = công ty mẹ
+  - itemCode theo mã số chuẩn VAS (Thông tư 200): 21001=DT thuần, 22100=Giá vốn, 23003=LNST...
+  - Giá trị đơn vị: đồng (không nhân 1e6 như code cũ)
+- [x] Fix Industry Comparison: đổi /ratios/latest (404) → /ratios, dùng q= syntax thay filter=/where=
+- [x] Thêm ApiConstants.financialStatements endpoint
+
 ### Known Issues
-- [ ] BCTC (KQKD, CĐKT, LCTT) API: KBS API chết, VNDirect /financial_statements trả 500, TCBS 404. Đang tìm API thay thế (Vietstock finance cần session cookie). fundamental_api_datasource.dart đã rewrite sang VNDirect nhưng chưa hoạt động.
-- [ ] Industry comparison: rewrite sang VNDirect stocks API, cần test lại
+- [ ] Industry comparison: ROE, ROA, D/E chưa có trong /ratios endpoint, cần tìm nguồn bổ sung
 
 ---
 
