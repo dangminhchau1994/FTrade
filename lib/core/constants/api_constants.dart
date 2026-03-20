@@ -5,10 +5,10 @@ class ApiConstants {
   static const String vietstockTvNew = 'https://api.vietstock.vn/tvnew';
   static const String vietstockFinanceBase = 'https://finance.vietstock.vn';
 
-  // SSI iBoard WebSocket (realtime market data)
-  static const String ssiWebSocketUrl =
-      'wss://wgateway-iboard.ssi.com.vn/graphql';
-  static const String ssiWebSocketProtocol = 'graphql-transport-ws';
+  // SSI Price Streaming MQTT (realtime market data)
+  static const String ssiMqttUrl = 'wss://price-streaming.ssi.com.vn/mqtt';
+  static const String ssiMqttUsername = 'mqtt-ssi';
+  static const String ssiMqttPassword = 'mqtt-ssi';
   // Stock prices - supports sort by date, pctChange, nmVolume
   static const String stockPrices = '$vndirectBase/stock_prices';
 
