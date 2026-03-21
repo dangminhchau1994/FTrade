@@ -69,7 +69,8 @@ class MqttService {
 
     _client!
       ..useWebSocket = true
-      ..secure = uri.scheme == 'wss'
+      // secure = true là cho TCP thuần, KHÔNG dùng cho WSS
+      // WS connection handler tự xử lý wss:// scheme qua WebSocket.connect()
       ..websocketProtocols = ['mqtt']
       ..keepAlivePeriod = keepAliveSeconds
       ..connectTimeoutPeriod = 10000

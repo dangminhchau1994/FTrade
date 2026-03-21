@@ -58,8 +58,14 @@
   - Fix cache size limit (max 500 entries)
 - [x] Update MarketDataController (đổi WebSocketStatus → MqttConnectionStatus)
 
-### Known Issues
-- [ ] Industry comparison: ROE, ROA, D/E chưa có trong /ratios endpoint, cần tìm nguồn bổ sung
+### 2026-03-21 - Fix chỉ số cơ bản & industry comparison
+- [x] Fix P/E, P/B, EPS, Vốn hóa không hiển thị: đổi filter=/where= → q= syntax
+- [x] Fix multi-itemCode không hoạt động: fetch riêng từng ratio song song
+- [x] EPS = Price / P/E (itemCode 51009 không có data, tính ngược từ P/E realtime)
+- [x] Fix Industry Comparison thiếu ROE, ROA, D/E:
+  - Tính từ financial_statements (data đến 2025-12-31)
+  - ROE = TTM LNST / Vốn CSH, ROA = TTM LNST / Tổng TS, D/E = Nợ / Vốn CSH
+  - Fetch BS (12700, 13000, 14000) + IS (23003) song song per chunk
 
 ---
 

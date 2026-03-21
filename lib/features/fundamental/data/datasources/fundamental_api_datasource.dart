@@ -292,6 +292,7 @@ class FundamentalApiDatasource {
   ) async {
     final result = <String, Map<String, double>>{};
 
+    // ── PE, PB từ /ratios ─────────────────────────────────────────────────────
     for (final chunk in _chunk(symbols, 20)) {
       final codes = chunk.join(',');
       for (final ratioCode in [ApiConstants.ratioPE, ApiConstants.ratioPB]) {
@@ -310,13 +311,84 @@ class FundamentalApiDatasource {
             final code = (row['code'] as String? ?? '').toUpperCase();
             final itemCode = row['itemCode'] as String? ?? '';
             final value = _toDouble(row['value']);
-
             result.putIfAbsent(code, () => {});
             if (itemCode == ApiConstants.ratioPE) result[code]!['pe'] = value;
             if (itemCode == ApiConstants.ratioPB) result[code]!['pb'] = value;
           }
         } catch (_) {}
       }
+    }
+
+    // ── ROE, ROA, D/E tính từ financial_statements ────────────────────────────
+    // ROE = TTM LNST / Vốn CSH
+    // ROA = TTM LNST / Tổng tài sản
+    // D/E = Nợ phải trả / Vốn CSH
+    for (final chunk in _chunk(symbols, 20)) {
+      final codes = chunk.join(',');
+
+      // BS: Tổng tài sản (12700), Nợ phải trả (13000), Vốn CSH (14000)
+      final bsFuture = _dio.get(
+        ApiConstants.financialStatements,
+        queryParameters: {
+          'q': 'code:$codes~reportType:QUARTER~modelType:1~itemCode:12700,13000,14000',
+          'sort': 'fiscalDate:desc',
+          'size': chunk.length * 3,
+        },
+      );
+
+      // IS: LNST (23003) — lấy 4 quý gần nhất để tính TTM
+      final isFuture = _dio.get(
+        ApiConstants.financialStatements,
+        queryParameters: {
+          'q': 'code:$codes~reportType:QUARTER~modelType:2~itemCode:23003',
+          'sort': 'fiscalDate:desc',
+          'size': chunk.length * 4,
+        },
+      );
+
+      try {
+        final responses = await Future.wait([bsFuture, isFuture]);
+
+        // Parse BS — lấy giá trị mới nhất của mỗi itemCode
+        final bsData = responses[0].data['data'] as List? ?? [];
+        final bs = <String, Map<int, double>>{};
+        for (final item in bsData) {
+          final row = item as Map<String, dynamic>;
+          final code = (row['code'] as String? ?? '').toUpperCase();
+          final itemCode = (row['itemCode'] as num).toInt();
+          final value = _toDouble(row['numericValue']);
+          bs.putIfAbsent(code, () => {});
+          bs[code]!.putIfAbsent(itemCode, () => value); // giữ giá trị mới nhất
+        }
+
+        // Parse IS — cộng dồn LNST 4 quý gần nhất (TTM)
+        final isData = responses[1].data['data'] as List? ?? [];
+        final lnstByCode = <String, List<double>>{};
+        for (final item in isData) {
+          final row = item as Map<String, dynamic>;
+          final code = (row['code'] as String? ?? '').toUpperCase();
+          final value = _toDouble(row['numericValue']);
+          lnstByCode.putIfAbsent(code, () => []);
+          if (lnstByCode[code]!.length < 4) lnstByCode[code]!.add(value);
+        }
+
+        for (final code in chunk) {
+          final bsMap = bs[code] ?? {};
+          final totalAssets = bsMap[12700] ?? 0;
+          final totalDebt = bsMap[13000] ?? 0;
+          final equity = bsMap[14000] ?? 0;
+          final ttmLnst = lnstByCode[code]?.fold(0.0, (a, b) => a + b) ?? 0;
+
+          result.putIfAbsent(code, () => {});
+          if (equity > 0) {
+            result[code]!['roe'] = ttmLnst / equity * 100; // %
+            result[code]!['debtToEquity'] = totalDebt / equity;
+          }
+          if (totalAssets > 0) {
+            result[code]!['roa'] = ttmLnst / totalAssets * 100; // %
+          }
+        }
+      } catch (_) {}
     }
 
     return result;

@@ -104,59 +104,52 @@ class MarketApiDatasource {
       },
     );
 
-    final ratioFuture = _dio.get(
-      ApiConstants.ratios,
-      queryParameters: {
-        'filter': 'code:$symbol',
-        'where': 'itemCode:${ApiConstants.ratioPE},${ApiConstants.ratioPB},${ApiConstants.ratioMarketCap}',
-        'order': 'reportDate',
-      },
-    );
-
-    final stockInfoFuture = _dio.get(
-      ApiConstants.stocks,
-      queryParameters: {
-        'q': 'code:$symbol~type:STOCK',
-        'size': 1,
-      },
-    );
-
-    final priceResponse = await priceFuture;
-
-    Response<dynamic>? ratioResponse;
-    Response<dynamic>? stockInfoResponse;
-
-    try {
-      ratioResponse = await ratioFuture;
-    } catch (_) {
-      ratioResponse = null;
+    // Comma syntax không hoạt động → fetch mỗi itemCode riêng
+    Future<double?> fetchRatio(String itemCode) async {
+      try {
+        final res = await _dio.get(
+          ApiConstants.ratios,
+          queryParameters: {
+            'q': 'code:$symbol~itemCode:$itemCode',
+            'order': 'reportDate:desc',
+            'size': 1,
+          },
+        );
+        final data = res.data['data'] as List?;
+        return (data?.firstOrNull?['value'] as num?)?.toDouble();
+      } catch (_) {
+        return null;
+      }
     }
 
-    try {
-      stockInfoResponse = await stockInfoFuture;
-    } catch (_) {
-      stockInfoResponse = null;
-    }
+    final stockInfoFuture = _dio.get(ApiConstants.stocks, queryParameters: {
+      'q': 'code:$symbol~type:STOCK',
+      'size': 1,
+    });
 
-    final priceData = (priceResponse.data['data'] as List?)?.firstOrNull;
-    final ratioData = ratioResponse?.data['data'] as List? ?? [];
-    final stockInfo = (stockInfoResponse?.data['data'] as List?)?.firstOrNull;
+    // Fetch tất cả song song
+    final responses = await Future.wait([
+      priceFuture,
+      stockInfoFuture.catchError((_) async => Response(requestOptions: RequestOptions())),
+      fetchRatio(ApiConstants.ratioPE),
+      fetchRatio(ApiConstants.ratioPB),
+      fetchRatio(ApiConstants.ratioMarketCap),
+    ]);
+
+    final priceData = ((responses[0] as Response).data['data'] as List?)?.firstOrNull;
+    final stockInfo = ((responses[1] as Response).data['data'] as List?)?.firstOrNull;
+    final double? pe = responses[2] as double?;
+    final double? pb = responses[3] as double?;
+    final double? marketCap = responses[4] as double?;
 
     if (priceData == null) {
       throw Exception('No price data found for $symbol');
     }
 
-    // Parse ratios
-    double? pe, pb, marketCap;
-    for (final r in ratioData) {
-      final code = r['itemCode'] as String?;
-      final value = (r['value'] as num?)?.toDouble();
-      if (code == ApiConstants.ratioPE) pe = value;
-      if (code == ApiConstants.ratioPB) pb = value;
-      if (code == ApiConstants.ratioMarketCap) marketCap = value;
-    }
-
     final price = (priceData['close'] as num).toDouble();
+    // EPS không có trong /ratios → tính từ Price / P/E (P/E = Price/EPS)
+    // price từ API đơn vị nghìn VND, nhân 1000 để ra VND thực
+    final double? eps = (pe != null && pe > 0) ? (price * 1000) / pe : null;
     final change = (priceData['change'] as num?)?.toDouble() ?? 0;
     final basicPrice = (priceData['basicPrice'] as num?)?.toDouble() ?? price;
     final pctChange = (priceData['pctChange'] as num?)?.toDouble() ?? 0;
@@ -180,6 +173,7 @@ class MarketApiDatasource {
       refPrice: basicPrice * 1000,
       pe: pe,
       pb: pb,
+      eps: eps,
       marketCap: marketCap,
       foreignBuy: null,
       foreignSell: null,
