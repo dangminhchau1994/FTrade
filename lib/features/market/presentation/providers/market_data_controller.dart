@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/datasources/market_realtime_datasource.dart';
 import '../../domain/entities/realtime_market_data.dart';
-import '../../../../core/network/websocket_service.dart';
+import '../../../../core/network/mqtt_service.dart';
 
 /// Provider cho MarketRealtimeDatasource singleton
 final marketRealtimeDatasourceProvider =
@@ -14,9 +14,9 @@ final marketRealtimeDatasourceProvider =
   return datasource;
 });
 
-/// Trạng thái kết nối WebSocket
+/// Trạng thái kết nối MQTT
 final marketConnectionStatusProvider =
-    StreamProvider<WebSocketStatus>((ref) {
+    StreamProvider<MqttConnectionStatus>((ref) {
   final datasource = ref.watch(marketRealtimeDatasourceProvider);
   return datasource.statusStream;
 });
@@ -40,10 +40,7 @@ class MarketDataController extends StateNotifier<MarketDataState> {
       _listenData();
       state = state.copyWith(isConnected: true, isConnecting: false);
     } catch (e) {
-      state = state.copyWith(
-        isConnecting: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isConnecting: false, error: e.toString());
     }
   }
 
@@ -54,10 +51,6 @@ class MarketDataController extends StateNotifier<MarketDataState> {
     await _datasource.disconnect();
     state = const MarketDataState();
   }
-
-  /// Lấy data mới nhất cho 1 mã từ cache
-  RealtimeMarketData? getLatest(String symbol) =>
-      _datasource.getLatest(symbol);
 
   void _listenData() {
     _subscription?.cancel();
@@ -117,7 +110,7 @@ final marketDataControllerProvider =
   return controller;
 });
 
-/// Provider tiện ích: lấy realtime data cho 1 mã cụ thể
+/// Realtime data cho 1 mã cụ thể (từ state cache)
 final realtimeStockProvider =
     Provider.family<RealtimeMarketData?, String>((ref, symbol) {
   final state = ref.watch(marketDataControllerProvider);

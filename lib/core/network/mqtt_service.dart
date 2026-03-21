@@ -62,7 +62,7 @@ class MqttService {
     final clientId = 'flutter-${_randomId()}';
 
     _client = MqttServerClient.withPort(
-      uri.host,
+      url, // full URL — WS handler dùng Uri.parse(server) để extract path
       clientId,
       uri.port > 0 ? uri.port : port,
     );
@@ -71,7 +71,6 @@ class MqttService {
       ..useWebSocket = true
       ..secure = uri.scheme == 'wss'
       ..websocketProtocols = ['mqtt']
-      ..path = uri.path
       ..keepAlivePeriod = keepAliveSeconds
       ..connectTimeoutPeriod = 10000
       ..autoReconnect = false

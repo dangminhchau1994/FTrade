@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+// SSI iBoard MQTT stock data schema
+// Reverse-engineered from iboard.ssi.com.vn JS bundle
+// Topic format: s/{SYMBOL}/MAIN  (e.g. s/VNM/MAIN)
+// Wildcard:     s/+/MAIN
+
+option java_package = "com.ssi.iboard";
+
+message StockData {
+  // ── Định danh ─────────────────────────────────────────────────────────────
+  string symbol        = 1;  // Mã cổ phiếu, e.g. "VNM"
+
+  // ── Giá khớp lệnh ─────────────────────────────────────────────────────────
+  int32  matched_price  = 2;  // Giá khớp (raw VND, e.g. 149800)
+  int32  matched_volume = 3;  // KL khớp lệnh gần nhất
+
+  // ── Thay đổi giá ──────────────────────────────────────────────────────────
+  sint32 price_change         = 4;  // Thay đổi giá (zigzag, raw VND)
+  sint32 price_change_percent = 5;  // Thay đổi % (zigzag, *100, e.g. 700 = 7.00%)
+
+  // ── Tổng khối lượng & giá trị ─────────────────────────────────────────────
+  int64  total_volume = 6;  // Tổng KL khớp trong phiên
+  int64  total_value  = 7;  // Tổng GT khớp trong phiên (nghìn VND)
+
+  // ── OHLC ──────────────────────────────────────────────────────────────────
+  int32  open_price  = 8;   // Giá mở cửa (raw VND)
+  int32  high_price  = 9;   // Giá cao nhất (raw VND)
+  int32  low_price   = 10;  // Giá thấp nhất (raw VND)
+
+  // ── Giá tham chiếu ────────────────────────────────────────────────────────
+  int32  ceiling   = 11;  // Giá trần (raw VND)
+  int32  floor     = 12;  // Giá sàn (raw VND)
+  int32  ref_price = 13;  // Giá tham chiếu (raw VND)
+
+  // ── 3 bước giá mua (Bid) ──────────────────────────────────────────────────
+  int32  best1_bid     = 14;
+  int32  best1_bid_vol = 15;
+  int32  best2_bid     = 16;
+  int32  best2_bid_vol = 17;
+  int32  best3_bid     = 18;
+  int32  best3_bid_vol = 19;
+
+  // ── 3 bước giá bán (Ask / Offer) ──────────────────────────────────────────
+  int32  best1_offer     = 20;
+  int32  best1_offer_vol = 21;
+  int32  best2_offer     = 22;
+  int32  best2_offer_vol = 23;
+  int32  best3_offer     = 24;
+  int32  best3_offer_vol = 25;
+
+  // ── Khối ngoại ────────────────────────────────────────────────────────────
+  int64  buy_foreign_qtty  = 26;  // KL nước ngoài mua
+  int64  sell_foreign_qtty = 27;  // KL nước ngoài bán
+
+  // ── Phiên giao dịch ───────────────────────────────────────────────────────
+  string session = 28;  // "ATO" | "ATC" | "LO" | "PT" | "C" | "O"
+
+  // ── Thống kê bổ sung ──────────────────────────────────────────────────────
+  int32  avg_price         = 29;  // Giá bình quân (raw VND)
+  int64  buy_count         = 30;  // Số lệnh mua
+  int64  sell_count        = 31;  // Số lệnh bán
+  int64  net_foreign_qtty  = 32;  // Chênh lệch mua/bán nước ngoài
+
+  // ── Room nước ngoài ───────────────────────────────────────────────────────
+  int64  foreign_room      = 33;  // Room nước ngoài còn lại
+  int64  current_foreign   = 34;  // KL nước ngoài hiện nằm giữ
+
+  // ── Giá & KL thỏa thuận (put-through) ────────────────────────────────────
+  int32  pt_matched_price  = 35;  // Giá khớp thỏa thuận (raw VND)
+  int64  pt_matched_volume = 36;  // KL khớp thỏa thuận
+
+  // ── ATO / ATC ─────────────────────────────────────────────────────────────
+  int32  ato_price = 37;  // Giá ATO (raw VND)
+  int32  atc_price = 38;  // Giá ATC (raw VND)
+
+  // ── Dư lệnh ATO/ATC ───────────────────────────────────────────────────────
+  int64  ato_volume = 39;  // Dư mua ATO
+  int64  atc_volume = 40;  // Dư mua ATC
+
+  // ── Bid/Ask bước 4 & 5 (nếu sàn hỗ trợ) ─────────────────────────────────
+  int32  best4_bid     = 41;
+  int32  best4_bid_vol = 42;
+  int32  best5_bid     = 43;
+  int32  best5_bid_vol = 44;
+  int32  best4_offer     = 45;
+  int32  best4_offer_vol = 46;
+  int32  best5_offer     = 47;
+  int32  best5_offer_vol = 48;
+
+  // ── Tên sàn ───────────────────────────────────────────────────────────────
+  string exchange = 49;  // "HOSE" | "HNX" | "UPCOM"
+
+  // ── Số dư lệnh mua/bán ────────────────────────────────────────────────────
+  int64  total_buy_trade_amount  = 50;
+  int64  total_sell_trade_amount = 51;
+
+  // ── Market cap / Index weight (nếu có) ────────────────────────────────────
+  double index_weight = 52;
+
+  // ── Dữ liệu phái sinh / warrant (nếu áp dụng) ────────────────────────────
+  int32  underlying_price = 53;  // Giá TSCS (raw VND)
+  double premium          = 54;  // Premium (%)
+  double implied_vol      = 55;  // IV (%)
+  double delta            = 56;
+
+  // ── Trạng thái ────────────────────────────────────────────────────────────
+  string trading_status = 57;  // "N" = normal, "H" = halt, "S" = suspend
+
+  // ── Timestamp ─────────────────────────────────────────────────────────────
+  int64  trade_date = 58;  // Ngày giao dịch (yyyyMMdd)
+  int64  time       = 59;  // Thời điểm (HHmmss hoặc Unix ms)
+
+  // ── Fields 60–72: reserved / unknown từ JS bundle ─────────────────────────
+  int64  field60 = 60;
+  int64  field61 = 61;
+  int64  field62 = 62;
+  int64  field63 = 63;
+  int64  field64 = 64;
+  int64  field65 = 65;
+  int64  field66 = 66;
+  int64  field67 = 67;
+  int64  field68 = 68;
+  int64  field69 = 69;
+  int64  field70 = 70;
+  int64  field71 = 71;
+  int64  field72 = 72;
+}

@@ -38,6 +38,26 @@
 - [x] Fix Industry Comparison: đổi /ratios/latest (404) → /ratios, dùng q= syntax thay filter=/where=
 - [x] Thêm ApiConstants.financialStatements endpoint
 
+### 2026-03-20 - MQTT Migration (đang làm)
+- [x] Phát hiện SSI đổi endpoint: wgateway-iboard.ssi.com.vn → NXDOMAIN (domain chết)
+- [x] Reverse engineer JS bundle iboard.ssi.com.vn → tìm ra endpoint mới: wss://price-streaming.ssi.com.vn/mqtt
+- [x] Xác nhận endpoint public (không cần auth), protocol MQTT 3.1.1, username/password: mqtt-ssi/mqtt-ssi
+- [x] Reverse engineer StockData protobuf schema (72 fields, từ JS bundle)
+  - Topic format: s/{symbol}/MAIN, wildcard: s/+/MAIN
+  - Prices: int32 raw VND, priceChange/Percent: sint32 zigzag encoded
+- [x] Thêm mqtt_client ^10.3.0 vào pubspec.yaml
+- [x] Viết MqttService (mqtt_service.dart): fix _disposed/reconnect flags, memory leak, auto re-subscribe
+- [x] Update ApiConstants: ssiMqttUrl, ssiMqttUsername, ssiMqttPassword
+- [x] Viết proto/stock_data.proto (72 fields reverse-engineered từ JS bundle)
+- [x] Generate Dart code từ protoc (stock_data.pb.dart)
+- [x] Rewrite MarketRealtimeDatasource dùng MQTT + StockData.fromBuffer()
+  - Fix lifecycle bug (_mqtt != null guard thay vì _initialized flag)
+  - Fix memory leak (giữ _statusSub ref)
+  - Fix re-subscribe sau reconnect (_topics Set)
+  - Fix dedup (so sánh Freezed equality trước khi emit)
+  - Fix cache size limit (max 500 entries)
+- [x] Update MarketDataController (đổi WebSocketStatus → MqttConnectionStatus)
+
 ### Known Issues
 - [ ] Industry comparison: ROE, ROA, D/E chưa có trong /ratios endpoint, cần tìm nguồn bổ sung
 
