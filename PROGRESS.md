@@ -69,10 +69,54 @@
 
 ---
 
-## Phase 2: Phân tích & cảnh báo (chưa bắt đầu)
-- [ ] Watchlist tự động + cảnh báo tín hiệu
-- [ ] Phát hiện dòng tiền bất thường, GD nội bộ/tự doanh/cá mập
-- [ ] Phân tích TA cơ bản
+## Phase 2: Phân tích & cảnh báo ✅ DONE
+
+### 2026-03-22 - Watchlist + cảnh báo giá
+- [x] PriceAlert model (Hive persistent storage)
+- [x] PriceAlertNotifier (add/remove/toggle, persisted)
+- [x] NotificationService (flutter_local_notifications, iOS+Android)
+- [x] PriceAlertMonitor: subscribe MQTT stream → fire notification khi giá chạm ngưỡng
+- [x] Auto-disable alert sau khi triggered
+- [x] AddAlertDialog widget (set target price, above/below)
+- [x] Wire monitor vào main.dart (auto-start on app launch)
+
+### 2026-03-22 - Phát hiện dòng tiền bất thường
+- [x] VolumeAnomaly entity (symbol, todayVol, avgVol20d, ratio, price, changePercent)
+- [x] getVolumeAnomalies() trong MoneyFlowApiDatasource:
+  - Lấy top 200 cổ phiếu KL cao nhất ngày GD gần nhất
+  - Batch fetch 21 phiên lịch sử cho top 50
+  - Tính ratio = todayVol / avg20d, lọc ratio >= 2
+- [x] volumeAnomaliesProvider (FutureProvider)
+- [x] VolumeAnomalyList widget (ratio badge, KL hôm nay vs TB, changePercent)
+- [x] Tab "KL bất thường" trong MoneyFlowScreen (tab thứ 4)
+
+### 2026-03-22 - Realtime chỉ số thị trường + Trang detail chỉ số
+- [x] Fix format chỉ số: FormatUtils.indexValue() (#,##0.00 — không chia 1000)
+- [x] IndexRealtimeDatasource: CafeF SignalR hub (wss://realtime.cafef.vn/hub/priceshub)
+  - skipNegotiation=true, JoinChannel(symbol), sự kiện RealtimePrice
+  - Auto-reconnect với exponential backoff
+- [x] RealtimeIndexData entity (symbol, value, change, changePercent, advances, declines, unchanged)
+- [x] MarketDataController: song song MQTT (stocks) + CafeF WS (indices)
+- [x] realtimeMarketIndicesProvider: merge REST + realtime overlay
+- [x] IndexDetailScreen (/index/:symbol):
+  - Header: giá realtime, thay đổi, Live badge
+  - Biểu đồ lịch sử (SSI iboard API) — 5 periods: 1M/3M/6M/1Y/5Y
+  - Breadth bar (tăng/giảm/đứng)
+  - Top 5 tăng / Top 5 giảm (theo sàn: HOSE/HNX/UPCOM)
+- [x] Route /index/:symbol đăng ký trong AppRouter
+- [x] Card chỉ số tại HomeScreen có thể tap để vào IndexDetailScreen
+
+### 2026-03-22 - Phân tích TA
+- [x] ChartApiDatasource: fetch OHLCV từ VNDirect (5 periods: 1D/1W/1M/3M/1Y)
+- [x] IndicatorCalculator: MA5/10/20/50, RSI(14), MACD(12,26,9) với EMA Wilder's smoothing
+- [x] StockChart widget:
+  - Price line chart + gradient fill
+  - Volume bar chart
+  - MA overlay lines (toggle chips)
+  - RSI panel (overbought 70 / oversold 30 lines)
+  - MACD panel (histogram + signal line)
+  - Period selector
+- [x] Wire vào StockDetailScreen
 
 ## Phase 3: Nhận định thông minh (chưa bắt đầu)
 - [ ] Phân tích FA doanh nghiệp

@@ -5,6 +5,7 @@ import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/vietstock_finance_client.dart';
 import '../../domain/entities/foreign_flow.dart';
 import '../../domain/entities/market_flow_summary.dart';
+import '../../domain/entities/volume_anomaly.dart';
 
 class MoneyFlowApiDatasource {
   MoneyFlowApiDatasource(this._dio)
@@ -46,6 +47,86 @@ class MoneyFlowApiDatasource {
   Future<List<ForeignFlow>> getTopNetSellers() async {
     final tradingDate = await _getLatestTradingDate();
     return _topSellers(await _getAllFlows(tradingDate));
+  }
+
+  /// Top cổ phiếu có KL giao dịch bất thường (ratio = today / avg20d > 1.5)
+  Future<List<VolumeAnomaly>> getVolumeAnomalies({int minRatio = 2}) async {
+    // 1. Lấy ngày giao dịch gần nhất
+    final latestDate = await _getLatestTradingDate();
+    final latestDateStr = _dateFormat.format(latestDate);
+
+    // 2. Fetch top stocks by volume (sort date:desc,nmVolume:desc)
+    final response = await _dio.get(
+      ApiConstants.stockPrices,
+      queryParameters: {
+        'q': 'type:STOCK',
+        'sort': 'date:desc,nmVolume:desc',
+        'size': 200,
+      },
+    );
+
+    final allData = (response.data['data'] as List? ?? [])
+        .map((e) => e as Map<String, dynamic>)
+        .where((r) => r['date'] == latestDateStr && _toDouble(r['nmVolume']) > 0)
+        .toList();
+
+    if (allData.isEmpty) return [];
+
+    // 3. Top 50 theo KL hôm nay
+    allData.sort((a, b) => _toDouble(b['nmVolume']).compareTo(_toDouble(a['nmVolume'])));
+    final top50 = allData.take(50).toList();
+    final symbols = top50.map((r) => r['code'] as String).toList();
+
+    // 4. Fetch 21 phiên gần nhất cho top50 (batch)
+    final historyResp = await _dio.get(
+      ApiConstants.stockPrices,
+      queryParameters: {
+        'q': 'code:${symbols.join(',')}',
+        'sort': 'date:desc',
+        'size': symbols.length * 21,
+      },
+    );
+
+    final histData = (historyResp.data['data'] as List? ?? [])
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+
+    // Group volumes by symbol
+    final volsBySymbol = <String, List<double>>{};
+    for (final r in histData) {
+      final code = r['code'] as String;
+      volsBySymbol.putIfAbsent(code, () => []);
+      if (volsBySymbol[code]!.length < 21) {
+        volsBySymbol[code]!.add(_toDouble(r['nmVolume']));
+      }
+    }
+
+    // 5. Tính anomaly ratio
+    final anomalies = <VolumeAnomaly>[];
+    for (final r in top50) {
+      final symbol = r['code'] as String;
+      final vols = volsBySymbol[symbol] ?? [];
+      if (vols.length < 5) continue; // không đủ data lịch sử
+
+      final todayVol = vols[0];
+      final avgVol = vols.skip(1).fold(0.0, (a, b) => a + b) / (vols.length - 1);
+      if (avgVol <= 0) continue;
+
+      final ratio = todayVol / avgVol;
+      if (ratio < minRatio) continue;
+
+      anomalies.add(VolumeAnomaly(
+        symbol: symbol,
+        todayVolume: todayVol,
+        avgVolume20d: avgVol,
+        ratio: ratio,
+        price: _toDouble(r['close']) * 1000,
+        changePercent: _toDouble(r['pctChange']),
+      ));
+    }
+
+    anomalies.sort((a, b) => b.ratio.compareTo(a.ratio));
+    return anomalies;
   }
 
   Future<List<ForeignFlow>> getForeignFlowHistory(String symbol) async {

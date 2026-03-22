@@ -79,6 +79,34 @@ class MarketApiDatasource {
     return _parseStockList(response.data);
   }
 
+  /// Top gainers for a specific exchange (HOSE, HNX, UPCOM)
+  Future<List<Stock>> getTopGainersForExchange(String exchange) async {
+    final today = await _getLatestTradingDate();
+    final response = await _dio.get(
+      ApiConstants.stockPrices,
+      queryParameters: {
+        'q': 'floor:$exchange~date:$today~type:STOCK',
+        'size': 5,
+        'sort': 'pctChange:desc',
+      },
+    );
+    return _parseStockList(response.data);
+  }
+
+  /// Top losers for a specific exchange (HOSE, HNX, UPCOM)
+  Future<List<Stock>> getTopLosersForExchange(String exchange) async {
+    final today = await _getLatestTradingDate();
+    final response = await _dio.get(
+      ApiConstants.stockPrices,
+      queryParameters: {
+        'q': 'floor:$exchange~date:$today~type:STOCK',
+        'size': 5,
+        'sort': 'pctChange:asc',
+      },
+    );
+    return _parseStockList(response.data);
+  }
+
   /// Top volume - sorted by nmVolume descending
   Future<List<Stock>> getTopVolume() async {
     final today = await _getLatestTradingDate();

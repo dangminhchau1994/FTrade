@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/market/presentation/screens/market_screen.dart';
 import '../../features/market/presentation/screens/search_screen.dart';
+import '../../features/market/presentation/screens/index_detail_screen.dart';
 import '../../features/market/presentation/screens/stock_detail_screen.dart';
 import '../../features/news/presentation/screens/news_detail_screen.dart';
 import '../../features/news/presentation/screens/news_screen.dart';
@@ -26,6 +27,13 @@ final appRouter = GoRouter(
       path: '/stock/:symbol',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => StockDetailScreen(
+        symbol: state.pathParameters['symbol']!,
+      ),
+    ),
+    GoRoute(
+      path: '/index/:symbol',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => IndexDetailScreen(
         symbol: state.pathParameters['symbol']!,
       ),
     ),

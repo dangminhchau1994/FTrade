@@ -5,6 +5,7 @@ import '../providers/money_flow_providers.dart';
 import '../widgets/flow_summary_card.dart';
 import '../widgets/flow_bar_chart.dart';
 import '../widgets/flow_ranking_list.dart';
+import '../widgets/volume_anomaly_list.dart';
 
 class MoneyFlowScreen extends ConsumerWidget {
   const MoneyFlowScreen({super.key});
@@ -12,7 +13,7 @@ class MoneyFlowScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Dòng tiền'),
@@ -21,6 +22,7 @@ class MoneyFlowScreen extends ConsumerWidget {
               Tab(text: 'Tổng quan'),
               Tab(text: 'Top mua ròng'),
               Tab(text: 'Top bán ròng'),
+              Tab(text: 'KL bất thường'),
             ],
           ),
         ),
@@ -29,6 +31,7 @@ class MoneyFlowScreen extends ConsumerWidget {
             _OverviewTab(),
             _BuyersTab(),
             _SellersTab(),
+            _VolumeAnomalyTab(),
           ],
         ),
       ),
@@ -106,6 +109,22 @@ class _SellersTab extends ConsumerWidget {
       onRefresh: () async => ref.invalidate(topNetSellersProvider),
       child: sellers.when(
         data: (data) => FlowRankingList(flows: data, isBuyers: false),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Lỗi: $e')),
+      ),
+    );
+  }
+}
+
+class _VolumeAnomalyTab extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final anomalies = ref.watch(volumeAnomaliesProvider);
+
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(volumeAnomaliesProvider),
+      child: anomalies.when(
+        data: (data) => VolumeAnomalyList(anomalies: data),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
       ),

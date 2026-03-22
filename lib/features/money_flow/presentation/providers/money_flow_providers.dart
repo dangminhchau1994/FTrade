@@ -4,6 +4,7 @@ import '../../../../core/network/dio_provider.dart';
 import '../../data/datasources/money_flow_api_datasource.dart';
 import '../../domain/entities/foreign_flow.dart';
 import '../../domain/entities/market_flow_summary.dart';
+import '../../domain/entities/volume_anomaly.dart';
 
 final moneyFlowDatasourceProvider = Provider<MoneyFlowApiDatasource>((ref) {
   final dio = ref.watch(dioClientProvider).dio;
@@ -32,3 +33,8 @@ final foreignFlowHistoryProvider =
       final ds = ref.watch(moneyFlowDatasourceProvider);
       return ds.getForeignFlowHistory(symbol);
     });
+
+final volumeAnomaliesProvider = FutureProvider<List<VolumeAnomaly>>((ref) async {
+  final ds = ref.watch(moneyFlowDatasourceProvider);
+  return ds.getVolumeAnomalies();
+});

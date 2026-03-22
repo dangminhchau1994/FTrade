@@ -38,6 +38,20 @@ class FormatUtils {
     return date(dt);
   }
 
+  /// Chỉ số thị trường (đã đúng scale, không chia 1000): 1647.81 → "1,647.81"
+  static String indexValue(double value) {
+    return _indexFormat.format(value);
+  }
+
+  /// Thay đổi chỉ số: -51.32 / -3.02% → "-51.32 / -3.02%"
+  static String indexChangeWithPercent(double change, double percent) {
+    final prefix = change > 0 ? '+' : '';
+    final pPrefix = percent > 0 ? '+' : '';
+    return '$prefix${change.toStringAsFixed(2)} / $pPrefix${percent.toStringAsFixed(2)}%';
+  }
+
+  static final _indexFormat = NumberFormat('#,##0.00');
+
   static String marketCap(double value) {
     if (value >= 1e12) return '${(value / 1e12).toStringAsFixed(1)}T tỷ';
     if (value >= 1e9) return '${(value / 1e9).toStringAsFixed(1)} tỷ';

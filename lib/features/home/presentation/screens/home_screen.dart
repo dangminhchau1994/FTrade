@@ -14,7 +14,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final indices = ref.watch(marketIndicesProvider);
+    final indices = ref.watch(realtimeMarketIndicesProvider);
     final topGainers = ref.watch(topGainersProvider);
     final latestNews = ref.watch(latestNewsProvider);
 
@@ -34,7 +34,7 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(marketIndicesProvider);
+          ref.invalidate(marketIndicesProvider); // refresh REST base data
           ref.invalidate(topGainersProvider);
           ref.invalidate(latestNewsProvider);
         },
@@ -51,7 +51,19 @@ class HomeScreen extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final idx = data[index];
                     final isUp = idx.change >= 0;
-                    return Container(
+                    const nameToSymbol = {
+                      'VN-Index': 'VNINDEX',
+                      'HNX-Index': 'HNXINDEX',
+                      'UPCOM': 'UPCOMINDEX',
+                      'VN30': 'VN30',
+                      'HNX30': 'HNX30',
+                    };
+                    final rtSymbol = nameToSymbol[idx.name];
+                    return GestureDetector(
+                      onTap: rtSymbol != null
+                          ? () => context.push('/index/$rtSymbol')
+                          : null,
+                      child: Container(
                       width: 180,
                       margin: const EdgeInsets.only(right: 12),
                       padding: const EdgeInsets.all(14),
@@ -71,7 +83,7 @@ class HomeScreen extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            FormatUtils.price(idx.value),
+                            FormatUtils.indexValue(idx.value),
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -92,7 +104,7 @@ class HomeScreen extends ConsumerWidget {
                                 size: 20,
                               ),
                               Text(
-                                FormatUtils.changeWithPercent(idx.change, idx.changePercent),
+                                FormatUtils.indexChangeWithPercent(idx.change, idx.changePercent),
                                 style: TextStyle(
                                   color: isUp
                                       ? AppTheme.gainColor
@@ -105,6 +117,7 @@ class HomeScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
+                    ),
                     );
                   },
                 ),

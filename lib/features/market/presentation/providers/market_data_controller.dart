@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/datasources/index_realtime_datasource.dart';
 import '../../data/datasources/market_realtime_datasource.dart';
+import '../../domain/entities/realtime_index_data.dart';
 import '../../domain/entities/realtime_market_data.dart';
 import '../../../../core/network/mqtt_service.dart';
 
@@ -10,6 +12,14 @@ import '../../../../core/network/mqtt_service.dart';
 final marketRealtimeDatasourceProvider =
     Provider<MarketRealtimeDatasource>((ref) {
   final datasource = MarketRealtimeDatasource();
+  ref.onDispose(() => datasource.dispose());
+  return datasource;
+});
+
+/// Provider cho IndexRealtimeDatasource singleton
+final indexRealtimeDatasourceProvider =
+    Provider<IndexRealtimeDatasource>((ref) {
+  final datasource = IndexRealtimeDatasource();
   ref.onDispose(() => datasource.dispose());
   return datasource;
 });
@@ -24,18 +34,24 @@ final marketConnectionStatusProvider =
 /// Controller quản lý realtime market data
 class MarketDataController extends StateNotifier<MarketDataState> {
   final MarketRealtimeDatasource _datasource;
-  StreamSubscription<RealtimeMarketData>? _subscription;
+  final IndexRealtimeDatasource _indexDatasource;
+  StreamSubscription<RealtimeMarketData>? _stockSubscription;
+  StreamSubscription<RealtimeIndexData>? _indexSubscription;
 
-  MarketDataController(this._datasource) : super(const MarketDataState());
+  MarketDataController(this._datasource, this._indexDatasource)
+      : super(const MarketDataState());
 
-  /// Kết nối & subscribe tất cả sàn
+  /// Kết nối MQTT (stocks) + VNDIRECT WebSocket (indices)
   Future<void> connect() async {
     if (state.isConnected) return;
 
     state = state.copyWith(isConnecting: true);
 
     try {
-      await _datasource.connect();
+      await Future.wait([
+        _datasource.connect(),
+        _indexDatasource.connect(),
+      ]);
       _datasource.subscribeAll();
       _listenData();
       state = state.copyWith(isConnected: true, isConnecting: false);
@@ -46,24 +62,37 @@ class MarketDataController extends StateNotifier<MarketDataState> {
 
   /// Ngắt kết nối
   Future<void> disconnect() async {
-    _subscription?.cancel();
-    _subscription = null;
-    await _datasource.disconnect();
+    _stockSubscription?.cancel();
+    _stockSubscription = null;
+    _indexSubscription?.cancel();
+    _indexSubscription = null;
+    await Future.wait([
+      _datasource.disconnect(),
+      _indexDatasource.disconnect(),
+    ]);
     state = const MarketDataState();
   }
 
   void _listenData() {
-    _subscription?.cancel();
-    _subscription = _datasource.dataStream.listen((data) {
+    _stockSubscription?.cancel();
+    _stockSubscription = _datasource.dataStream.listen((data) {
       final updated = Map<String, RealtimeMarketData>.from(state.stocks);
       updated[data.symbol] = data;
       state = state.copyWith(stocks: updated, lastUpdated: DateTime.now());
+    });
+
+    _indexSubscription?.cancel();
+    _indexSubscription = _indexDatasource.stream.listen((data) {
+      final updated = Map<String, RealtimeIndexData>.from(state.indices);
+      updated[data.symbol] = data;
+      state = state.copyWith(indices: updated, lastUpdated: DateTime.now());
     });
   }
 
   @override
   void dispose() {
-    _subscription?.cancel();
+    _stockSubscription?.cancel();
+    _indexSubscription?.cancel();
     super.dispose();
   }
 }
@@ -71,6 +100,7 @@ class MarketDataController extends StateNotifier<MarketDataState> {
 /// State cho MarketDataController
 class MarketDataState {
   final Map<String, RealtimeMarketData> stocks;
+  final Map<String, RealtimeIndexData> indices;
   final bool isConnected;
   final bool isConnecting;
   final String? error;
@@ -78,6 +108,7 @@ class MarketDataState {
 
   const MarketDataState({
     this.stocks = const {},
+    this.indices = const {},
     this.isConnected = false,
     this.isConnecting = false,
     this.error,
@@ -86,6 +117,7 @@ class MarketDataState {
 
   MarketDataState copyWith({
     Map<String, RealtimeMarketData>? stocks,
+    Map<String, RealtimeIndexData>? indices,
     bool? isConnected,
     bool? isConnecting,
     String? error,
@@ -93,6 +125,7 @@ class MarketDataState {
   }) {
     return MarketDataState(
       stocks: stocks ?? this.stocks,
+      indices: indices ?? this.indices,
       isConnected: isConnected ?? this.isConnected,
       isConnecting: isConnecting ?? this.isConnecting,
       error: error,
@@ -105,7 +138,8 @@ class MarketDataState {
 final marketDataControllerProvider =
     StateNotifierProvider<MarketDataController, MarketDataState>((ref) {
   final datasource = ref.watch(marketRealtimeDatasourceProvider);
-  final controller = MarketDataController(datasource);
+  final indexDatasource = ref.watch(indexRealtimeDatasourceProvider);
+  final controller = MarketDataController(datasource, indexDatasource);
   ref.onDispose(() => controller.disconnect());
   return controller;
 });

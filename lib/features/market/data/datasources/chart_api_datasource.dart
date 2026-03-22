@@ -8,6 +8,9 @@ class ChartApiDatasource {
   final Dio _dio;
   final _dateFormat = DateFormat('yyyy-MM-dd');
 
+  static const _ssiChartUrl =
+      'https://iboard-api.ssi.com.vn/statistics/charts/history';
+
   ChartApiDatasource(this._dio);
 
   Future<List<ChartPoint>> getChartData(
@@ -52,5 +55,54 @@ class ChartApiDatasource {
         volume: (d['nmVolume'] as num?)?.toInt() ?? 0,
       );
     }).toList();
+  }
+
+  /// Historical OHLCV for market indices (VNINDEX, HNXINDEX, UPCOMINDEX).
+  /// Uses SSI iboard chart API (no auth required).
+  Future<List<ChartPoint>> getIndexChartData(
+    String symbol, {
+    required String period,
+  }) async {
+    final now = DateTime.now();
+    final fromDate = switch (period) {
+      '1M' => now.subtract(const Duration(days: 35)),
+      '3M' => now.subtract(const Duration(days: 100)),
+      '6M' => now.subtract(const Duration(days: 200)),
+      '1Y' => now.subtract(const Duration(days: 400)),
+      '5Y' => now.subtract(const Duration(days: 1900)),
+      _ => now.subtract(const Duration(days: 100)),
+    };
+
+    final response = await _dio.get(
+      _ssiChartUrl,
+      queryParameters: {
+        'symbol': symbol,
+        'resolution': 'D',
+        'from': fromDate.millisecondsSinceEpoch ~/ 1000,
+        'to': now.millisecondsSinceEpoch ~/ 1000,
+      },
+    );
+
+    final payload = response.data as Map<String, dynamic>;
+    if (payload['code'] != 'SUCCESS') return [];
+
+    final d = payload['data'] as Map<String, dynamic>;
+    final t = d['t'] as List? ?? [];
+    final o = d['o'] as List? ?? [];
+    final h = d['h'] as List? ?? [];
+    final l = d['l'] as List? ?? [];
+    final c = d['c'] as List? ?? [];
+    final v = d['v'] as List? ?? [];
+
+    return List.generate(t.length, (i) {
+      return ChartPoint(
+        date: DateTime.fromMillisecondsSinceEpoch((t[i] as num).toInt() * 1000),
+        open: (o[i] as num).toDouble(),
+        high: (h[i] as num).toDouble(),
+        low: (l[i] as num).toDouble(),
+        close: (c[i] as num).toDouble(),
+        volume: (v[i] as num).toInt(),
+      );
+    });
   }
 }
