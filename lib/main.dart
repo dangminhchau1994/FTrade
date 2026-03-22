@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
+import 'core/services/notification_service.dart';
 import 'core/storage/hive_storage.dart';
 import 'core/theme/app_theme.dart';
 import 'features/market/presentation/providers/market_data_controller.dart';
 import 'features/settings/presentation/providers/theme_provider.dart';
+import 'features/watchlist/data/services/price_alert_monitor.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await HiveStorage.init();
+  await NotificationService.init();
   runApp(const ProviderScope(child: FTradeApp()));
 }
 
@@ -28,6 +31,8 @@ class _FTradeAppState extends ConsumerState<FTradeApp> with WidgetsBindingObserv
     // Auto-connect WebSocket realtime khi app khởi động
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(marketDataControllerProvider.notifier).connect();
+      // Start price alert monitor (lắng nghe MQTT stream, fire notification)
+      ref.read(priceAlertMonitorProvider);
     });
   }
 

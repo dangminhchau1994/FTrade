@@ -84,6 +84,8 @@ class PriceAlertNotifier extends StateNotifier<List<PriceAlert>> {
     ];
   }
 
+  List<PriceAlert> get alerts => state;
+
   List<PriceAlert> alertsForSymbol(String symbol) {
     return state.where((a) => a.symbol == symbol).toList();
   }
