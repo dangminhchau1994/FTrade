@@ -16,6 +16,17 @@ class PriceAlert {
     this.enabled = true,
   });
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PriceAlert &&
+          symbol == other.symbol &&
+          targetPrice == other.targetPrice &&
+          isAbove == other.isAbove;
+
+  @override
+  int get hashCode => symbol.hashCode ^ targetPrice.hashCode ^ isAbove.hashCode;
+
   Map<String, dynamic> toJson() => {
         'symbol': symbol,
         'targetPrice': targetPrice,

@@ -118,6 +118,13 @@
   - Period selector
 - [x] Wire vào StockDetailScreen
 
+### 2026-03-24 - Bugfix Phase 2
+- [x] Fix typo `'volume '` (trailing space) trong market_api_datasource.dart → parse volume thất bại
+- [x] Fix index mapping `'UPC-Index'` → `'UPCOM'` để realtime UPCOM match REST data
+- [x] Fix PriceAlert thiếu equality → auto-disable sau khi triggered không hoạt động
+- [x] Fix alert monitor dùng `indexWhere()` thay `indexOf()` cho auto-disable chính xác
+- [x] Thêm `clearTriggered()` method để alert có thể trigger lại khi user thêm lại
+
 ## Phase 3: Nhận định thông minh (chưa bắt đầu)
 - [ ] Phân tích FA doanh nghiệp
 - [ ] Nhận định vĩ mô & dự đoán rủi ro

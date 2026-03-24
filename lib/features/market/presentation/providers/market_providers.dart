@@ -91,7 +91,7 @@ final indexBySymbolProvider =
 const _indexNameToSymbol = {
   'VN-Index': 'VNINDEX',
   'HNX-Index': 'HNXINDEX',
-  'UPC-Index': 'UPCOMINDEX',
+  'UPCOM': 'UPCOMINDEX',
   'VN30': 'VN30',
   'HNX30': 'HNX30',
 };

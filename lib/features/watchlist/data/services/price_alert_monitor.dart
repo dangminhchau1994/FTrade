@@ -45,6 +45,11 @@ class PriceAlertMonitor {
     _logger.i('PriceAlertMonitor started');
   }
 
+  /// Xóa triggered key để alert có thể trigger lại (khi user thêm lại alert)
+  void clearTriggered(String symbol, double targetPrice, bool isAbove) {
+    _triggered.remove('${symbol}_${targetPrice}_$isAbove');
+  }
+
   void dispose() {
     _sub?.cancel();
     _sub = null;
@@ -79,7 +84,12 @@ class PriceAlertMonitor {
         );
 
         // Disable alert sau khi triggered
-        final index = _alertNotifier.alerts.indexOf(alert);
+        // Tìm index bằng equality (symbol + targetPrice + isAbove)
+        final currentAlerts = _alertNotifier.alerts;
+        final index = currentAlerts.indexWhere((a) =>
+            a.symbol == alert.symbol &&
+            a.targetPrice == alert.targetPrice &&
+            a.isAbove == alert.isAbove);
         if (index >= 0) _alertNotifier.toggle(index);
       }
     }

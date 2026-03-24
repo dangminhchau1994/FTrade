@@ -400,7 +400,7 @@ class MarketApiDatasource {
     required _MarketBreadth breadth,
   }) {
     final volumeValue =
-        (quote['volume '] as num?)?.toInt() ??
+        (quote['volume'] as num?)?.toInt() ??
         (quote['volume'] as num?)?.toInt() ??
         breadth.totalVolume;
 
