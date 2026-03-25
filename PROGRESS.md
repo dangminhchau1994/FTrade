@@ -128,10 +128,18 @@
 ### 2026-03-25 - Bugfix MQTT proto noise
 - [x] Fix log noise: proto decode error cho symbols như VNR (schema mismatch) — đổi log level từ debug → trace
 
-## Phase 3: Nhận định thông minh (chưa bắt đầu)
-- [ ] Phân tích FA doanh nghiệp
+## Phase 3: Nhận định thông minh (đang làm)
+
+### 2026-03-25 - FA Analysis engine (đang làm, dừng giữa chừng)
+- [x] Entity `FaAnalysis` (Freezed): PiotroskiScore, AltmanZScore, DuPontAnalysis, GrowthMetrics, ValuationResult, RiskMetrics
+- [x] `FaCalculator` (pure static): Piotroski F-Score (0-9), Altman Z Original + EM (Z''), DuPont, Growth QoQ/YoY, Graham Number, PEG, DCF (2-stage FCFF), EV/EBITDA, FCF Yield, Risk (Volatility/Beta/MaxDD/Sharpe)
+- [x] `FaAnalysisDatasource`: cache 6h + Flutter `compute` isolate cho heavy calculation
+- [x] Provider `faAnalysisProvider` (FutureProvider.family với record params)
+- [ ] `FaDashboardScreen` UI — CÒN LẠI: viết screen (đang bị interrupt)
+- [ ] Wire route `/fa/:symbol` vào AppRouter
+- [ ] Wire button "Phân tích FA" vào StockDetailScreen
 - [ ] Nhận định vĩ mô & dự đoán rủi ro
-- [ ] AI recommendation
+- [ ] AI recommendation / Stock screener
 
 ## Phase 4: Giao dịch (chưa bắt đầu)
 - [ ] Tích hợp VNDirect API, vào lệnh tự động
