@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:logger/logger.dart';
 import 'package:mqtt_client/mqtt_client.dart';
@@ -99,9 +101,26 @@ class MarketRealtimeDatasource {
     _cache.clear();
   }
 
+  // SSI sends futures/index data (e.g. FUESSVFL, FUEVFVND) on the same
+  // wildcard s/+/MAIN but with a different proto schema. Skip non-stock topics.
+  static final _stockTopicRe = RegExp(r'^s/[A-Z]{1,5}/MAIN$');
+
   void _handleMessage(MqttReceivedMessage<MqttMessage> msg) {
+    if (!_stockTopicRe.hasMatch(msg.topic)) return;
+
     try {
-      final bytes = mqttPayloadBytes(msg);
+      var bytes = mqttPayloadBytes(msg);
+
+      // Detect gzip (magic bytes 0x1f 0x8b) and decompress
+      if (bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b) {
+        try {
+          bytes = Uint8List.fromList(gzip.decode(bytes));
+        } catch (_) {
+          _logger.d('Gzip decode failed on ${msg.topic}, skipping');
+          return;
+        }
+      }
+
       final proto = StockData.fromBuffer(bytes);
       final data = _toEntity(proto);
       if (data == null) return;
@@ -116,7 +135,9 @@ class MarketRealtimeDatasource {
       _cache[data.symbol] = data;
       if (!_dataController.isClosed) _dataController.add(data);
     } catch (e) {
-      _logger.e('Proto decode error on ${msg.topic}: $e');
+      // Log at debug level — wire-type mismatches are expected for some
+      // symbols whose server-side schema differs slightly from ours.
+      _logger.t('Proto decode skip ${msg.topic}: $e');
     }
   }
 

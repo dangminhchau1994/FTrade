@@ -125,6 +125,9 @@
 - [x] Fix alert monitor dùng `indexWhere()` thay `indexOf()` cho auto-disable chính xác
 - [x] Thêm `clearTriggered()` method để alert có thể trigger lại khi user thêm lại
 
+### 2026-03-25 - Bugfix MQTT proto noise
+- [x] Fix log noise: proto decode error cho symbols như VNR (schema mismatch) — đổi log level từ debug → trace
+
 ## Phase 3: Nhận định thông minh (chưa bắt đầu)
 - [ ] Phân tích FA doanh nghiệp
 - [ ] Nhận định vĩ mô & dự đoán rủi ro
