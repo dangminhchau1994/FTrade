@@ -128,14 +128,26 @@
 ### 2026-03-25 - Bugfix MQTT proto noise
 - [x] Fix log noise: proto decode error cho symbols như VNR (schema mismatch) — đổi log level từ debug → trace
 
+### 2026-03-26 - Fix realtime (đang làm)
+- [x] Phát hiện SSI MQTT dùng self-signed cert → Flutter bị reject SSL silently
+- [x] Fix: thêm `onBadCertificate = (_) => true` trong MqttService
+- [x] Phát hiện CafeF SignalR ngưng gửi RealtimePrice events (chỉ có RealtimeMarkertStatus=5)
+- [x] Tìm nguồn thay thế: SSI iboard chart API (resolution=1, poll 15s)
+  - Cần headers `Referer: iboard.ssi.com.vn`, `Origin: iboard.ssi.com.vn` (403 nếu thiếu)
+  - VNINDEX, HNXINDEX, VN30, HNX30 hoạt động. UPCOMINDEX không có data.
+- [x] Rewrite `IndexRealtimeDatasource`: đổi CafeF WS → SSI iboard poll (Dio)
+- [x] Update `MarketDataController` provider: inject Dio vào IndexRealtimeDatasource
+- [ ] CÒN LẠI: Thêm Referer header cho `ChartApiDatasource.getIndexChartData()` (cũng dùng SSI iboard, có thể bị 403)
+- [ ] CÒN LẠI: Test thực tế trên device
+
 ## Phase 3: Nhận định thông minh (đang làm)
 
-### 2026-03-25 - FA Analysis engine (đang làm, dừng giữa chừng)
-- [x] Entity `FaAnalysis` (Freezed): PiotroskiScore, AltmanZScore, DuPontAnalysis, GrowthMetrics, ValuationResult, RiskMetrics
-- [x] `FaCalculator` (pure static): Piotroski F-Score (0-9), Altman Z Original + EM (Z''), DuPont, Growth QoQ/YoY, Graham Number, PEG, DCF (2-stage FCFF), EV/EBITDA, FCF Yield, Risk (Volatility/Beta/MaxDD/Sharpe)
-- [x] `FaAnalysisDatasource`: cache 6h + Flutter `compute` isolate cho heavy calculation
-- [x] Provider `faAnalysisProvider` (FutureProvider.family với record params)
-- [ ] `FaDashboardScreen` UI — CÒN LẠI: viết screen (đang bị interrupt)
+### 2026-03-25 - FA Analysis engine
+- [x] Entity `FaAnalysis` (Freezed): PiotroskiScore, AltmanZScore (Original + EM Z''), DuPontAnalysis, GrowthMetrics, ValuationResult (Graham/PEG/DCF/EV-EBITDA/FCF Yield), RiskMetrics
+- [x] `FaCalculator` (pure static, isolate-safe)
+- [x] `FaAnalysisDatasource`: cache 6h + Flutter `compute` isolate
+- [x] Provider `faAnalysisProvider` (FutureProvider.family)
+- [ ] `FaDashboardScreen` UI
 - [ ] Wire route `/fa/:symbol` vào AppRouter
 - [ ] Wire button "Phân tích FA" vào StockDetailScreen
 - [ ] Nhận định vĩ mô & dự đoán rủi ro

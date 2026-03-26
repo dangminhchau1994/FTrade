@@ -2,11 +2,12 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/dio_provider.dart';
+import '../../../../core/network/mqtt_service.dart';
 import '../../data/datasources/index_realtime_datasource.dart';
 import '../../data/datasources/market_realtime_datasource.dart';
 import '../../domain/entities/realtime_index_data.dart';
 import '../../domain/entities/realtime_market_data.dart';
-import '../../../../core/network/mqtt_service.dart';
 
 /// Provider cho MarketRealtimeDatasource singleton
 final marketRealtimeDatasourceProvider =
@@ -19,7 +20,8 @@ final marketRealtimeDatasourceProvider =
 /// Provider cho IndexRealtimeDatasource singleton
 final indexRealtimeDatasourceProvider =
     Provider<IndexRealtimeDatasource>((ref) {
-  final datasource = IndexRealtimeDatasource();
+  final dio = ref.watch(dioClientProvider).dio;
+  final datasource = IndexRealtimeDatasource(dio);
   ref.onDispose(() => datasource.dispose());
   return datasource;
 });
