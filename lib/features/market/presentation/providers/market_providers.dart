@@ -110,10 +110,18 @@ final realtimeMarketIndicesProvider = Provider<AsyncValue<List<MarketIndex>>>((r
       final rt = rtState.indices[symbol];
       if (rt == null) return idx; // chưa có realtime data → dùng REST
 
+      // Recompute change from REST prev close + SSI latest value.
+      // SSI polling only has 10-min candle data, so its change is wrong
+      // (relative to 10-min ago, not previous day close).
+      final prevClose = idx.value - idx.change;
+      final newChange = prevClose > 0 ? rt.value - prevClose : rt.change;
+      final newChangePct =
+          prevClose > 0 ? newChange / prevClose * 100 : rt.changePercent;
+
       return idx.copyWith(
         value: rt.value,
-        change: rt.change,
-        changePercent: rt.changePercent,
+        change: newChange,
+        changePercent: newChangePct,
         advances: rt.advances ?? idx.advances,
         declines: rt.declines ?? idx.declines,
         unchanged: rt.unchanged ?? idx.unchanged,
