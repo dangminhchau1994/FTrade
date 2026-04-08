@@ -142,6 +142,19 @@
 
 ## Phase 3: Nhận định thông minh (đang làm)
 
+### 2026-04-02 - UX Design Specification hoàn thành
+- [x] PRD (`docs/prd.md`) — 35 FRs, 19 NFRs, 3 user journeys
+- [x] Architecture (`docs/architecture.md`)
+- [x] Epics & Stories (`docs/epics.md`) — 6 epics, 22 stories
+- [x] UX Design Spec (`docs/ux-design-specification.md`) — 939 dòng, 14 steps hoàn thành
+  - Design system: Material 3 + Flutter
+  - Direction 6 "Summary First": Hero AI Card + Index Strip + Sector Cards
+  - 7 custom components: AiSummaryHeroCard, SectorCard, IndexStripRow, StockChipRow, FeedbackRow, AccuracyBadge, OfflineBanner
+  - 3 user journey flows (Minh, Lan, Chau) với Mermaid diagrams
+  - UX patterns: loading, feedback, navigation, paywall, offline
+  - Responsive: Compact/Regular tiers, WCAG 2.1 AA
+- [x] Design mockups (`docs/ux-design-directions.html`) — 6 directions interactive
+
 ### 2026-03-25 - FA Analysis engine
 - [x] Entity `FaAnalysis` (Freezed): PiotroskiScore, AltmanZScore (Original + EM Z''), DuPontAnalysis, GrowthMetrics, ValuationResult (Graham/PEG/DCF/EV-EBITDA/FCF Yield), RiskMetrics
 - [x] `FaCalculator` (pure static, isolate-safe)
@@ -152,6 +165,41 @@
 - [ ] Wire button "Phân tích FA" vào StockDetailScreen
 - [ ] Nhận định vĩ mô & dự đoán rủi ro
 - [ ] AI recommendation / Stock screener
+
+### 2026-04-02 - Epic 1: Nền tảng Backend & Auth
+- [x] Thêm Firebase packages: `firebase_core`, `firebase_auth`, `cloud_firestore`, `google_sign_in`
+- [x] `AppUser` model (Freezed): uid, tier (free/premium), tosAccepted, email, displayName
+- [x] `UserRepository`: getOrCreateUser, acceptTos, updateProfile, watchUser (Firestore stream)
+- [x] `AuthService` provider: signInAnonymously, signInWithGoogle, signInWithEmail, linkAnonymous→real
+- [x] `_ensureAnonymousAuth()` trong main.dart — auto anonymous auth khi app start
+- [x] `ConnectivityBanner` widget — offline banner vàng, auto show/hide (Story 1.4)
+- [x] Wire `ConnectivityBanner` vào `MaterialApp.builder`
+- [x] `TosBottomSheet` — bottom sheet ToS, update Firestore khi accept (Story 1.3)
+- [x] `MorningBriefScreen` placeholder — ToS guard: show bottom sheet nếu chưa accept (Story 1.3)
+- [x] Route `/brief` thêm vào router, set làm `initialLocation`
+- [ ] CÒN LẠI: Chạy `flutterfire configure` để generate `firebase_options.dart` (cần Firebase project)
+- [ ] CÒN LẠI: Story 1.1 — GitHub Actions CI/CD deploy Firebase Functions
+- [ ] CÒN LẠI: Test thực tế trên device
+
+### 2026-04-02 - Epic 2: AI Morning Brief
+- [x] **Backend (Firebase Functions / TypeScript):**
+  - [x] `types.ts` — MorningBrief, SectorAnalysis, StockMention interfaces + VN_SECTORS + FORBIDDEN_PHRASES
+  - [x] `claude-client.ts` — Claude API proxy, forbidden phrase validation, auto-retry với adjusted prompt, cost tracking
+  - [x] `news-fetcher.ts` — RSS fetch từ Vietstock (2 feeds), parse XML, top 15 tin
+  - [x] `generate-morning-brief.ts` — Cron 7h GMT+7, retry 3 lần backoff, FCM admin alert khi fail
+  - [x] `api-morning-briefs.ts` — REST GET `/morningBriefs`, auth check, fallback về brief ngày gần nhất
+- [x] **Flutter:**
+  - [x] `MorningBrief` model (Freezed): date, summary, sectors, isFallback
+  - [x] `SectorAnalysis` model: impact, impactSummary, analysis, stocks, disclaimer
+  - [x] `MorningBriefDatasource`: fetch từ Functions API, Hive cache 7 ngày (Story 2.5)
+  - [x] `morningBriefProvider` (FutureProvider): fetch → fallback cache khi offline
+  - [x] `AiSummaryHeroCard` widget: gradient blue, 3 bullets, fallback badge, shimmer loading
+  - [x] `SectorCard` widget: expand/collapse 200ms, stock chips → StockDetail, feedback row, locked blur (freemium)
+  - [x] `MorningBriefScreen`: Direction 6 layout, pull-to-refresh, shimmer, error/empty states
+- [ ] CÒN LẠI: `firebase deploy --only functions` (cần set CLAUDE_API_KEY trước)
+- [ ] CÒN LẠI: Epic 3 — Feedback API + accuracy tracking
+- [ ] CÒN LẠI: Epic 4 — Push notifications
+- [ ] CÒN LẠI: Epic 5 — Premium & IAP
 
 ## Phase 4: Giao dịch (chưa bắt đầu)
 - [ ] Tích hợp VNDirect API, vào lệnh tự động

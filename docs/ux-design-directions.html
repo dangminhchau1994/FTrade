@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FTrade – UX Design Directions</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0F172A; --surface: #1E293B; --surface2: #334155;
+    --primary: #3B82F6; --primary-bg: rgba(59,130,246,0.12);
+    --text: #F1F5F9; --text2: #94A3B8; --text3: #64748B;
+    --outline: #334155;
+    --up: #22C55E; --down: #EF4444; --ref: #EAB308;
+    --ceil: #9333EA; --floor: #3B82F6;
+    --r4: 4px; --r8: 8px; --r12: 12px; --r16: 16px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #060D1A;
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Page header ── */
+  .page-header {
+    text-align: center;
+    padding: 40px 24px 32px;
+    border-bottom: 1px solid #1E293B;
+  }
+  .page-header h1 { font-size: 28px; font-weight: 700; }
+  .page-header p { color: var(--text2); margin-top: 8px; font-size: 14px; }
+
+  /* ── Direction tabs ── */
+  .tabs {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding: 24px 24px 0; scrollbar-width: none;
+    position: sticky; top: 0; z-index: 10;
+    background: #060D1A; border-bottom: 1px solid #1E293B;
+    padding-bottom: 0;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    flex-shrink: 0; padding: 10px 18px; border-radius: 8px 8px 0 0;
+    border: 1px solid var(--outline); border-bottom: none;
+    background: var(--surface); color: var(--text2);
+    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); background: var(--surface2); }
+  .tab-btn.active {
+    background: #0F172A; color: var(--primary);
+    border-color: var(--primary); border-bottom-color: #0F172A;
+  }
+
+  /* ── Direction panels ── */
+  .direction-panel { display: none; padding: 32px 24px 64px; }
+  .direction-panel.active { display: block; }
+
+  .direction-meta {
+    max-width: 800px; margin: 0 auto 32px;
+    padding: 20px 24px; background: var(--surface);
+    border-radius: var(--r12); border-left: 3px solid var(--primary);
+  }
+  .direction-meta h2 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .direction-meta p { color: var(--text2); font-size: 14px; line-height: 1.6; }
+  .tags { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .tag {
+    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 500;
+    background: var(--primary-bg); color: var(--primary); border: 1px solid rgba(59,130,246,0.3);
+  }
+
+  /* ── Phone frame ── */
+  .phones { display: flex; gap: 32px; flex-wrap: wrap; justify-content: center; }
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .phone-label { font-size: 12px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .phone {
+    width: 375px; height: 780px; border-radius: 44px;
+    background: var(--bg); border: 8px solid #1a1a2e;
+    overflow: hidden; position: relative;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .phone-inner { height: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+  .phone-inner::-webkit-scrollbar { display: none; }
+
+  /* ── Status bar ── */
+  .status-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 24px 4px; font-size: 12px; font-weight: 600;
+    position: sticky; top: 0; z-index: 5; background: var(--bg);
+  }
+  .status-right { display: flex; gap: 6px; align-items: center; }
+
+  /* ── Bottom nav ── */
+  .bottom-nav {
+    display: flex; justify-content: space-around;
+    padding: 8px 0 16px; border-top: 1px solid var(--outline);
+    background: var(--surface); position: sticky; bottom: 0;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10px; color: var(--text3); padding: 4px 12px;
+  }
+  .nav-item.active { color: var(--primary); }
+  .nav-icon { font-size: 20px; }
+
+  /* ── Shared components ── */
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: var(--r8);
+    font-size: 12px; font-weight: 500; cursor: pointer;
+  }
+  .chip-up { background: rgba(34,197,94,0.15); color: var(--up); }
+  .chip-down { background: rgba(239,68,68,0.15); color: var(--down); }
+  .chip-ref { background: rgba(234,179,8,0.15); color: var(--ref); }
+  .chip-neutral { background: var(--surface2); color: var(--text2); }
+
+  .badge-ai {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    background: var(--primary-bg); color: var(--primary);
+    border: 1px solid rgba(59,130,246,0.4);
+  }
+  .badge-live {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600;
+    background: rgba(34,197,94,0.15); color: var(--up);
+  }
+  .dot-pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--up); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .disclaimer {
+    font-size: 11px; color: var(--text3); line-height: 1.5;
+    padding: 8px 12px; background: rgba(255,255,255,0.03);
+    border-radius: var(--r8); border-left: 2px solid var(--text3);
+    margin-top: 12px;
+  }
+
+  .feedback-row { display: flex; gap: 8px; margin-top: 12px; }
+  .fb-btn {
+    flex: 1; padding: 8px; border-radius: var(--r8); border: 1px solid var(--outline);
+    background: transparent; color: var(--text2); font-family: 'Inter',sans-serif;
+    font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .fb-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* ── DIRECTION 1: Card Stack ── */
+  .d1-header { padding: 16px 16px 0; }
+  .d1-summary {
+    margin: 16px; padding: 16px; background: var(--surface);
+    border-radius: var(--r12); border: 1px solid var(--outline);
+  }
+  .d1-summary-title {
+    font-size: 11px; font-weight: 600; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+  }
+  .bullet { display: flex; gap: 8px; margin-bottom: 8px; font-size: 13px; line-height: 1.5; color: var(--text2); }
+  .bullet::before { content: '•'; color: var(--primary); flex-shrink: 0; margin-top: 1px; }
+  .d1-sector {
+    margin: 0 16px 10px; border-radius: var(--r12);
+    background: var(--surface); border: 1px solid var(--outline);
+    overflow: hidden; transition: all 0.2s;
+  }
+  .d1-sector-header {
+    display: flex; align-items: center; padding: 14px 16px;
+    cursor: pointer; gap: 12px;
+  }
+  .sector-icon { font-size: 20px; }
+  .sector-info { flex: 1; }
+  .sector-name { font-size: 14px; font-weight: 600; }
+  .sector-preview { font-size: 12px; color: var(--text2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+  .sector-arrow { color: var(--text3); font-size: 12px; transition: transform 0.2s; }
+  .d1-sector.expanded .sector-arrow { transform: rotate(180deg); }
+  .d1-sector-body { padding: 0 16px 16px; border-top: 1px solid var(--outline); display: none; }
+  .d1-sector.expanded .d1-sector-body { display: block; }
+  .sector-analysis { font-size: 13px; color: var(--text2); line-height: 1.6; margin-top: 12px; }
+  .stock-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+
+  /* ── DIRECTION 2: Feed Style ── */
+  .d2-header { padding: 16px 16px 12px; border-bottom: 1px solid var(--outline); }
+  .d2-date { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .d2-title { font-size: 20px; font-weight: 700; margin-top: 4px; }
+  .d2-meta { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+  .d2-section { margin: 0 16px; padding: 16px 0; border-bottom: 1px solid var(--outline); }
+  .d2-section-label { font-size: 10px; font-weight: 600; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .d2-headline { font-size: 15px; font-weight: 600; line-height: 1.4; margin-bottom: 6px; }
+  .d2-body { font-size: 13px; color: var(--text2); line-height: 1.6; }
+  .d2-divider { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+  .d2-divider-line { flex: 1; height: 1px; background: var(--outline); }
+  .d2-divider-text { font-size: 11px; color: var(--text3); font-weight: 500; }
+
+  /* ── DIRECTION 3: Dashboard Grid ── */
+  .d3-header { padding: 14px 12px 10px; }
+  .d3-indices {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; padding: 0 12px 12px; border-bottom: 1px solid var(--outline);
+  }
+  .d3-index {
+    background: var(--surface); border-radius: var(--r8); padding: 10px 12px;
+    border: 1px solid var(--outline);
+  }
+  .d3-index-name { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; }
+  .d3-index-val { font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .d3-index-chg { font-size: 11px; font-weight: 500; margin-top: 1px; }
+  .d3-sectors { padding: 12px; }
+  .d3-sector-row {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
+    margin-bottom: 6px; background: var(--surface); border-radius: var(--r8);
+    border: 1px solid var(--outline);
+  }
+  .d3-sector-icon { font-size: 18px; margin-top: 1px; }
+  .d3-sector-info { flex: 1; min-width: 0; }
+  .d3-sector-name { font-size: 13px; font-weight: 600; }
+  .d3-sector-text { font-size: 11px; color: var(--text2); margin-top: 3px; line-height: 1.4; }
+  .d3-sector-badge { }
+
+  /* ── DIRECTION 4: Story Mode ── */
+  .d4-scroll { display: flex; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; }
+  .d4-scroll::-webkit-scrollbar { display: none; }
+  .d4-page {
+    flex-shrink: 0; width: 100%; scroll-snap-align: start;
+    min-height: 660px; display: flex; flex-direction: column;
+  }
+  .d4-page-header { padding: 20px 20px 16px; }
+  .d4-page-number { font-size: 11px; color: var(--text3); font-weight: 500; }
+  .d4-page-title { font-size: 22px; font-weight: 700; margin-top: 4px; line-height: 1.3; }
+  .d4-page-body { flex: 1; padding: 0 20px; }
+  .d4-progress { display: flex; gap: 4px; padding: 12px 20px 8px; }
+  .d4-prog-dot { flex: 1; height: 3px; border-radius: 2px; background: var(--outline); }
+  .d4-prog-dot.done { background: var(--primary); }
+  .d4-prog-dot.active { background: var(--text2); }
+  .d4-stat { display: flex; align-items: baseline; gap: 8px; margin: 12px 0; }
+  .d4-stat-val { font-size: 28px; font-weight: 700; }
+  .d4-stat-label { font-size: 12px; color: var(--text2); }
+  .d4-detail { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 12px; }
+  .d4-nav { display: flex; gap: 8px; padding: 12px 20px; }
+  .d4-nav-btn {
+    flex: 1; padding: 10px; border-radius: var(--r8); border: 1px solid var(--outline);
+    background: transparent; color: var(--text2); font-family: 'Inter',sans-serif;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+  }
+  .d4-nav-btn.primary { background: var(--primary); border-color: var(--primary); color: white; }
+
+  /* ── DIRECTION 5: Minimal Digest ── */
+  .d5-header { padding: 20px 20px 16px; border-bottom: 1px solid var(--outline); }
+  .d5-kicker { font-size: 11px; color: var(--primary); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .d5-title { font-size: 22px; font-weight: 700; margin-top: 6px; line-height: 1.3; }
+  .d5-timestamp { font-size: 12px; color: var(--text3); margin-top: 8px; }
+  .d5-body { padding: 16px 20px; }
+  .d5-lead { font-size: 15px; color: var(--text); line-height: 1.7; margin-bottom: 20px; }
+  .d5-sector-title {
+    font-size: 13px; font-weight: 600; color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 12px 0 8px; border-top: 1px solid var(--outline);
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer;
+  }
+  .d5-sector-content { font-size: 13px; color: var(--text2); line-height: 1.6; padding-bottom: 8px; }
+  .d5-stocks-inline { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+  /* ── DIRECTION 6: Summary First ── */
+  .d6-hero {
+    margin: 16px; padding: 20px; border-radius: var(--r16);
+    background: linear-gradient(135deg, #1D4ED8 0%, #1E293B 100%);
+    border: 1px solid rgba(59,130,246,0.3);
+  }
+  .d6-hero-label { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; }
+  .d6-hero-title { font-size: 18px; font-weight: 700; margin-top: 6px; line-height: 1.4; }
+  .d6-hero-bullets { margin-top: 14px; }
+  .d6-bullet { display: flex; gap: 10px; margin-bottom: 8px; font-size: 13px; line-height: 1.5; color: rgba(255,255,255,0.85); }
+  .d6-bullet-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); flex-shrink: 0; margin-top: 5px; }
+  .d6-indices { display: flex; gap: 8px; padding: 0 16px 16px; }
+  .d6-index-chip {
+    flex: 1; padding: 10px 12px; border-radius: var(--r8);
+    background: var(--surface); border: 1px solid var(--outline);
+    text-align: center;
+  }
+  .d6-index-name { font-size: 10px; color: var(--text3); font-weight: 600; text-transform: uppercase; }
+  .d6-index-val { font-size: 15px; font-weight: 700; margin-top: 2px; }
+  .d6-index-chg { font-size: 11px; font-weight: 500; }
+  .d6-sectors-label { padding: 4px 16px 10px; font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .d6-sector {
+    margin: 0 16px 10px; border-radius: var(--r12);
+    background: var(--surface); border: 1px solid var(--outline); overflow: hidden;
+  }
+  .d6-sector-head {
+    display: flex; align-items: center; padding: 12px 14px; gap: 10px; cursor: pointer;
+  }
+  .d6-sector-icon { font-size: 18px; }
+  .d6-sector-info { flex: 1; }
+  .d6-sector-name { font-size: 13px; font-weight: 600; }
+  .d6-sector-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .d6-sector-tag { }
+
+  /* Comparison table */
+  .compare-section { max-width: 800px; margin: 48px auto 0; }
+  .compare-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text2); }
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .compare-table th { text-align: left; padding: 10px 16px; background: var(--surface); color: var(--text2); font-weight: 500; border-bottom: 1px solid var(--outline); }
+  .compare-table td { padding: 10px 16px; border-bottom: 1px solid var(--outline); color: var(--text); }
+  .compare-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .star { color: var(--ref); }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>FTrade – Design Direction Mockups</h1>
+  <p>Step 9 • Morning Brief screen • 6 visual directions to evaluate</p>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showDir(1,this)">1 · Card Stack</button>
+  <button class="tab-btn" onclick="showDir(2,this)">2 · Feed Style</button>
+  <button class="tab-btn" onclick="showDir(3,this)">3 · Dashboard Grid</button>
+  <button class="tab-btn" onclick="showDir(4,this)">4 · Story Mode</button>
+  <button class="tab-btn" onclick="showDir(5,this)">5 · Minimal Digest</button>
+  <button class="tab-btn" onclick="showDir(6,this)">6 · Summary First</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     DIRECTION 1: Card Stack
+════════════════════════════════════════ -->
+<div id="dir1" class="direction-panel active">
+  <div class="direction-meta">
+    <h2>Direction 1: Card Stack</h2>
+    <p>Sector cards xếp chồng, expand in-place khi tap. Summary luôn visible ở top. Interaction quen thuộc (accordion). Tốt cho scan nhanh nhiều sectors.</p>
+    <div class="tags">
+      <span class="tag">Accordion expand</span>
+      <span class="tag">Progressive disclosure</span>
+      <span class="tag">Compact default</span>
+      <span class="tag">Familiar pattern</span>
+    </div>
+  </div>
+
+  <div class="phones">
+    <div class="phone-wrap">
+      <div class="phone-label">Collapsed (default)</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-right">
+              <span>📶</span><span>🔋</span>
+            </div>
+          </div>
+
+          <!-- Header -->
+          <div class="d1-header">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:20px;font-weight:700;">Bản tin sáng</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:3px;">Thứ Ba, 01/04/2026</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                <span class="badge-ai">✦ AI</span>
+                <span class="badge-live"><span class="dot-pulse"></span>Live</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Index strip -->
+          <div style="display:flex;gap:8px;padding:8px 16px;overflow-x:auto;scrollbar-width:none;">
+            <div style="flex-shrink:0;background:var(--surface);border-radius:8px;padding:8px 12px;border:1px solid var(--outline);min-width:80px;">
+              <div style="font-size:10px;color:var(--text3);font-weight:600;">VNINDEX</div>
+              <div style="font-size:14px;font-weight:700;margin-top:2px;">1,285.4</div>
+              <div style="font-size:11px;color:var(--up);">+10.2 +0.8%</div>
+            </div>
+            <div style="flex-shrink:0;background:var(--surface);border-radius:8px;padding:8px 12px;border:1px solid var(--outline);min-width:80px;">
+              <div style="font-size:10px;color:var(--text3);font-weight:600;">HNX</div>
+              <div style="font-size:14px;font-weight:700;margin-top:2px;">225.7</div>
+              <div style="font-size:11px;color:var(--up);">+1.3 +0.6%</div>
+            </div>
+            <div style="flex-shrink:0;background:var(--surface);border-radius:8px;padding:8px 12px;border:1px solid var(--outline);min-width:80px;">
+              <div style="font-size:10px;color:var(--text3);font-weight:600;">VN30</div>
+              <div style="font-size:14px;font-weight:700;margin-top:2px;">1,298.1</div>
+              <div style="font-size:11px;color:var(--down);">-3.5 -0.3%</div>
+            </div>
+          </div>
+
+          <!-- Summary card -->
+          <div class="d1-summary">
+            <div class="d1-summary-title">Tóm tắt thị trường</div>
+            <div class="bullet">VNINDEX tăng nhẹ, dẫn dắt bởi nhóm ngân hàng và BĐS</div>
+            <div class="bullet">Thanh khoản cải thiện, dòng tiền ngoại mua ròng 120 tỷ</div>
+            <div class="bullet">Cổ phiếu thép, phân bón chịu áp lực từ giá hàng hóa</div>
+          </div>
+
+          <!-- Sector cards collapsed -->
+          <div style="padding:0 0 8px;">
+            <div style="padding:4px 16px 8px;font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">5 nhóm ngành đáng chú ý</div>
+
+            <div class="d1-sector">
+              <div class="d1-sector-header">
+                <span class="sector-icon">🏦</span>
+                <div class="sector-info">
+                  <div class="sector-name">Ngân hàng</div>
+                  <div class="sector-preview">Tích cực — NIM cải thiện, VCB dẫn đầu</div>
+                </div>
+                <span class="chip chip-up" style="font-size:11px;padding:3px 8px;">+1.2%</span>
+                <span class="sector-arrow">▼</span>
+              </div>
+            </div>
+
+            <div class="d1-sector">
+              <div class="d1-sector-header">
+                <span class="sector-icon">🏗️</span>
+                <div class="sector-info">
+                  <div class="sector-name">Bất động sản</div>
+                  <div class="sector-preview">Phục hồi — lãi suất hạ hỗ trợ ngắn hạn</div>
+                </div>
+                <span class="chip chip-up" style="font-size:11px;padding:3px 8px;">+0.9%</span>
+                <span class="sector-arrow">▼</span>
+              </div>
+            </div>
+
+            <div class="d1-sector">
+              <div class="d1-sector-header">
+                <span class="sector-icon">💻</span>
+                <div class="sector-info">
+                  <div class="sector-name">Công nghệ</div>
+                  <div class="sector-preview">Trung lập — chờ kết quả Q1 FPT</div>
+                </div>
+                <span class="chip chip-ref" style="font-size:11px;padding:3px 8px;">+0.1%</span>
+                <span class="sector-arrow">▼</span>
+              </div>
+            </div>
+
+            <div class="d1-sector">
+              <div class="d1-sector-header">
+                <span class="sector-icon">⚡</span>
+                <div class="sector-info">
+                  <div class="sector-name">Năng lượng</div>
+                  <div class="sector-preview">Tiêu cực — giá dầu giảm 2.1%</div>
+                </div>
+                <span class="chip chip-down" style="font-size:11px;padding:3px 8px;">-0.8%</span>
+                <span class="sector-arrow">▼</span>
+              </div>
+            </div>
+
+            <div class="d1-sector">
+              <div class="d1-sector-header">
+                <span class="sector-icon">🛒</span>
+                <div class="sector-info">
+                  <div class="sector-name">Tiêu dùng</div>
+                  <div class="sector-preview">Tích cực — sức mua cải thiện Q2</div>
+                </div>
+                <span class="chip chip-up" style="font-size:11px;padding:3px 8px;">+0.5%</span>
+                <span class="sector-arrow">▼</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:8px 16px 16px;font-size:11px;color:var(--text3);text-align:center;">
+            Cập nhật lúc 07:45 • Dữ liệu đến 31/03/2026
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><span class="nav-icon">📰</span>Bản tin</div>
+            <div class="nav-item"><span class="nav-icon">📊</span>Thị trường</div>
+            <div class="nav-item"><span class="nav-icon">🔔</span>Cảnh báo</div>
+            <div class="nav-item"><span class="nav-icon">🔍</span>Tìm kiếm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone-label">Expanded (Banking)</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-right"><span>📶</span><span>🔋</span></div></div>
+
+          <div class="d1-header">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-size:20px;font-weight:700;">Bản tin sáng</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:3px;">Thứ Ba, 01/04/2026</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                <span class="badge-ai">✦ AI</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="d1-sector expanded" style="margin:12px 16px;">
+            <div class="d1-sector-header" style="padding:14px 16px;">
+              <span class="sector-icon">🏦</span>
+              <div class="sector-info">
+                <div class="sector-name">Ngân hàng</div>
+                <div class="sector-preview">Tích cực hôm nay</div>
+              </div>
+              <span class="chip chip-up" style="font-size:11px;padding:3px 8px;">+1.2%</span>
+              <span class="sector-arrow" style="transform:rotate(180deg);">▼</span>
+            </div>
+            <div class="d1-sector-body" style="display:block;">
+              <div class="sector-analysis">
+                Nhóm ngân hàng dẫn dắt thị trường buổi sáng. NIM các ngân hàng lớn tiếp tục cải thiện nhờ lãi suất huy động giảm. NHNN duy trì chính sách tiền tệ nới lỏng đến Q3.
+              </div>
+              <div class="stock-chips">
+                <span class="chip chip-up">VCB +1.8%</span>
+                <span class="chip chip-up">BID +1.2%</span>
+                <span class="chip chip-up">TCB +0.9%</span>
+                <span class="chip chip-ref">MBB +0.1%</span>
+                <span class="chip chip-down">CTG -0.3%</span>
+              </div>
+              <div class="disclaimer">
+                Nội dung do AI tổng hợp từ dữ liệu thị trường, không phải khuyến nghị đầu tư.
+              </div>
+              <div class="feedback-row">
+                <button class="fb-btn">✓ Chính xác</button>
+                <button class="fb-btn">✗ Không chính xác</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Premium blur card -->
+          <div style="margin:0 16px 10px;border-radius:12px;overflow:hidden;position:relative;">
+            <div style="filter:blur(3px);pointer-events:none;background:var(--surface);border:1px solid var(--outline);border-radius:12px;padding:14px 16px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:20px;">🏗️</span>
+                <div style="flex:1;">
+                  <div style="font-size:14px;font-weight:600;">Bất động sản</div>
+                  <div style="font-size:12px;color:var(--text2);">Phục hồi — lãi suất hạ...</div>
+                </div>
+              </div>
+            </div>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(15,23,42,0.7);border-radius:12px;border:1px solid rgba(59,130,246,0.3);">
+              <div style="font-size:13px;font-weight:600;">Premium</div>
+              <div style="font-size:11px;color:var(--text2);">Mở khoá 4 nhóm còn lại</div>
+              <div style="padding:6px 14px;background:var(--primary);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">Nâng cấp</div>
+            </div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><span class="nav-icon">📰</span>Bản tin</div>
+            <div class="nav-item"><span class="nav-icon">📊</span>Thị trường</div>
+            <div class="nav-item"><span class="nav-icon">🔔</span>Cảnh báo</div>
+            <div class="nav-item"><span class="nav-icon">🔍</span>Tìm kiếm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DIRECTION 2: Feed Style
+════════════════════════════════════════ -->
+<div id="dir2" class="direction-panel">
+  <div class="direction-meta">
+    <h2>Direction 2: Feed Style</h2>
+    <p>Linear scroll theo kiểu newspaper/newsletter. Không cần tap để reveal — mọi thứ đều visible khi scroll. Cảm giác đọc bản tin thật sự, editorial.</p>
+    <div class="tags">
+      <span class="tag">Linear scroll</span>
+      <span class="tag">Editorial feel</span>
+      <span class="tag">No tap needed</span>
+      <span class="tag">Content-forward</span>
+    </div>
+  </div>
+
+  <div class="phones">
+    <div class="phone-wrap">
+      <div class="phone-label">Top of feed</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-right"><span>📶</span><span>🔋</span></div></div>
+
+          <div class="d2-header">
+            <div class="d2-date">Thứ Ba • 01/04/2026</div>
+            <div class="d2-title">Bản tin thị trường sáng</div>
+            <div class="d2-meta">
+              <span class="badge-ai">✦ AI</span>
+              <span class="badge-live"><span class="dot-pulse"></span>Live</span>
+              <span style="font-size:11px;color:var(--text3);">07:45</span>
+            </div>
+          </div>
+
+          <div class="d2-section">
+            <div class="d2-section-label">Tổng quan</div>
+            <div class="d2-headline">VNINDEX tăng 0.8%, thanh khoản cải thiện rõ rệt</div>
+            <div class="d2-body">
+              Thị trường mở cửa tích cực với lực cầu tập trung vào nhóm ngân hàng và BĐS. Dòng tiền ngoại mua ròng 120 tỷ đồng, tín hiệu khả quan cho phiên chiều.
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <div style="background:var(--surface);border-radius:8px;padding:8px 12px;border:1px solid var(--outline);flex:1;text-align:center;">
+                <div style="font-size:18px;font-weight:700;color:var(--up);">1,285</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:2px;">VNINDEX</div>
+              </div>
+              <div style="background:var(--surface);border-radius:8px;padding:8px 12px;border:1px solid var(--outline);flex:1;text-align:center;">
+                <div style="font-size:18px;font-weight:700;color:var(--up);">+0.8%</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:2px;">Thay đổi</div>
+              </div>
+              <div style="background:var(--surface);border-radius:8px;padding:8px 12px;border:1px solid var(--outline);flex:1;text-align:center;">
+                <div style="font-size:18px;font-weight:700;">4,230</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:2px;">Tỷ đồng KL</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d2-divider">
+            <div class="d2-divider-line"></div>
+            <div class="d2-divider-text">NGÂN HÀNG</div>
+            <div class="d2-divider-line"></div>
+          </div>
+
+          <div class="d2-section" style="padding-top:4px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:18px;">🏦</span>
+                <span style="font-size:14px;font-weight:600;">Ngân hàng</span>
+              </div>
+              <span class="chip chip-up">+1.2%</span>
+            </div>
+            <div class="d2-body">
+              NIM tiếp tục cải thiện nhờ lãi suất huy động giảm. VCB dẫn dắt nhóm với tăng trưởng tín dụng Q1 đạt 4.2%, vượt kế hoạch. BID được khuyến nghị tích lũy từ 3 CTCK.
+            </div>
+            <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+              <span class="chip chip-up">VCB +1.8%</span>
+              <span class="chip chip-up">BID +1.2%</span>
+              <span class="chip chip-up">TCB +0.9%</span>
+            </div>
+            <div class="feedback-row">
+              <button class="fb-btn">✓ Chính xác</button>
+              <button class="fb-btn">✗ Không chính xác</button>
+            </div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><span class="nav-icon">📰</span>Bản tin</div>
+            <div class="nav-item"><span class="nav-icon">📊</span>Thị trường</div>
+            <div class="nav-item"><span class="nav-icon">🔔</span>Cảnh báo</div>
+            <div class="nav-item"><span class="nav-icon">🔍</span>Tìm kiếm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone-label">Scrolled down</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-right"><span>📶</span><span>🔋</span></div></div>
+
+          <div style="padding:12px 16px 0;border-bottom:1px solid var(--outline);">
+            <div style="font-size:11px;color:var(--text3);">↑ Bản tin 01/04 • scroll lên để xem đầu</div>
+          </div>
+
+          <div class="d2-divider">
+            <div class="d2-divider-line"></div>
+            <div class="d2-divider-text">BẤT ĐỘNG SẢN</div>
+            <div class="d2-divider-line"></div>
+          </div>
+          <div class="d2-section" style="padding-top:4px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:18px;">🏗️</span><span style="font-size:14px;font-weight:600;">Bất động sản</span></div>
+              <span class="chip chip-up">+0.9%</span>
+            </div>
+            <div class="d2-body">Lãi suất cho vay mua nhà giảm về 8.5-9% kích thích cầu ngắn hạn. VHM công bố mở bán dự án mới Q2, NVL dần thoát nguy cơ trái phiếu đáo hạn.</div>
+            <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+              <span class="chip chip-up">VHM +1.4%</span>
+              <span class="chip chip-up">NVL +0.8%</span>
+              <span class="chip chip-ref">DXG +0.2%</span>
+            </div>
+            <div class="feedback-row">
+              <button class="fb-btn">✓ Chính xác</button>
+              <button class="fb-btn">✗ Không chính xác</button>
+            </div>
+          </div>
+
+          <!-- Premium teaser -->
+          <div style="margin:4px 16px 16px;padding:16px;background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(59,130,246,0.03));border:1px solid rgba(59,130,246,0.25);border-radius:12px;text-align:center;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;">+3 nhóm ngành nữa</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Công nghệ · Năng lượng · Tiêu dùng</div>
+            <div style="padding:8px 16px;background:var(--primary);border-radius:8px;font-size:13px;font-weight:600;display:inline-block;cursor:pointer;">Nâng cấp Premium</div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><span class="nav-icon">📰</span>Bản tin</div>
+            <div class="nav-item"><span class="nav-icon">📊</span>Thị trường</div>
+            <div class="nav-item"><span class="nav-icon">🔔</span>Cảnh báo</div>
+            <div class="nav-item"><span class="nav-icon">🔍</span>Tìm kiếm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DIRECTION 3: Dashboard Grid
+════════════════════════════════════════ -->
+<div id="dir3" class="direction-panel">
+  <div class="direction-meta">
+    <h2>Direction 3: Dashboard Grid</h2>
+    <p>Data-dense layout với indices grid ở top, sector rows compact phía dưới. Cảm giác Bloomberg/terminal. Phù hợp user muốn nhiều thông tin per scroll.</p>
+    <div class="tags">
+      <span class="tag">Data dense</span>
+      <span class="tag">Terminal feel</span>
+      <span class="tag">Grid layout</span>
+      <span class="tag">Power users</span>
+    </div>
+  </div>
+
+  <div class="phones">
+    <div class="phone-wrap">
+      <div class="phone-label">Default state</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-right"><span>📶</span><span>🔋</span></div></div>
+
+          <div class="d3-header">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;">
+              <div>
+                <div style="font-size:16px;font-weight:700;">Bản tin AI · 07:45</div>
+                <div style="font-size:11px;color:var(--text3);">01/04/2026 • 5 nhóm ngành</div>
+              </div>
+              <span class="badge-ai">✦ AI</span>
+            </div>
+          </div>
+
+          <!-- 4 indices grid -->
+          <div class="d3-indices">
+            <div class="d3-index">
+              <div class="d3-index-name">VNINDEX</div>
+              <div class="d3-index-val" style="color:var(--up);">1,285.4</div>
+              <div class="d3-index-chg" style="color:var(--up);">▲ +10.2 (+0.80%)</div>
+            </div>
+            <div class="d3-index">
+              <div class="d3-index-name">VN30</div>
+              <div class="d3-index-val" style="color:var(--down);">1,298.1</div>
+              <div class="d3-index-chg" style="color:var(--down);">▼ -3.5 (-0.27%)</div>
+            </div>
+            <div class="d3-index">
+              <div class="d3-index-name">HNX</div>
+              <div class="d3-index-val" style="color:var(--up);">225.7</div>
+              <div class="d3-index-chg" style="color:var(--up);">▲ +1.3 (+0.58%)</div>
+            </div>
+            <div class="d3-index">
+              <div class="d3-index-name">UPCOM</div>
+              <div class="d3-index-val" style="color:var(--ref);">88.4</div>
+              <div class="d3-index-chg" style="color:var(--ref);">● +0.0 (0.00%)</div>
+            </div>
+          </div>
+
+          <!-- AI summary row -->
+          <div style="margin:12px;padding:12px;background:var(--primary-bg);border-radius:8px;border:1px solid rgba(59,130,246,0.2);">
+            <div style="font-size:11px;font-weight:600;color:var(--primary);margin-bottom:6px;">✦ AI TÓM TẮT</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;">Ngân hàng + BĐS dẫn dắt. Dòng tiền ngoại mua ròng 120 tỷ. Cổ phiếu thép, phân bón chịu áp lực.</div>
+          </div>
+
+          <!-- Sector rows compact -->
+          <div class="d3-sectors">
+            <div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">NHÓM NGÀNH</div>
+
+            <div class="d3-sector-row">
+              <div class="d3-sector-icon">🏦</div>
+              <div class="d3-sector-info">
+                <div class="d3-sector-name">Ngân hàng</div>
+                <div class="d3-sector-text">NIM cải thiện, VCB dẫn đầu. BID được CTCK khuyến nghị mua.</div>
+                <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">
+                  <span class="chip chip-up" style="font-size:11px;padding:2px 7px;">VCB +1.8%</span>
+                  <span class="chip chip-up" style="font-size:11px;padding:2px 7px;">BID +1.2%</span>
+                </div>
+              </div>
+              <div class="d3-sector-badge"><span class="chip chip-up" style="font-size:11px;padding:3px 8px;">+1.2%</span></div>
+            </div>
+
+            <div class="d3-sector-row">
+              <div class="d3-sector-icon">🏗️</div>
+              <div class="d3-sector-info">
+                <div class="d3-sector-name">Bất động sản</div>
+                <div class="d3-sector-text">Lãi suất hạ hỗ trợ. VHM mở bán Q2, NVL ổn định nợ trái phiếu.</div>
+                <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">
+                  <span class="chip chip-up" style="font-size:11px;padding:2px 7px;">VHM +1.4%</span>
+                  <span class="chip chip-up" style="font-size:11px;padding:2px 7px;">NVL +0.8%</span>
+                </div>
+              </div>
+              <div class="d3-sector-badge"><span class="chip chip-up" style="font-size:11px;padding:3px 8px;">+0.9%</span></div>
+            </div>
+
+            <div class="d3-sector-row">
+              <div class="d3-sector-icon">💻</div>
+              <div class="d3-sector-info">
+                <div class="d3-sector-name">Công nghệ</div>
+                <div class="d3-sector-text">Chờ kết quả Q1. FPT tăng trưởng xuất khẩu IT ổn định.</div>
+                <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">
+                  <span class="chip chip-ref" style="font-size:11px;padding:2px 7px;">FPT +0.2%</span>
+                </div>
+              </div>
+              <div class="d3-sector-badge"><span class="chip chip-ref" style="font-size:11px;padding:3px 8px;">+0.1%</span></div>
+            </div>
+
+            <div class="d3-sector-row">
+              <div class="d3-sector-icon">⚡</div>
+              <div class="d3-sector-info">
+                <div class="d3-sector-name">Năng lượng</div>
+                <div class="d3-sector-text">Giá dầu Brent giảm 2.1%, áp lực lên GAS, PVD.</div>
+                <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">
+                  <span class="chip chip-down" style="font-size:11px;padding:2px 7px;">GAS -1.1%</span>
+                  <span class="chip chip-down" style="font-size:11px;padding:2px 7px;">PVD -0.7%</span>
+                </div>
+              </div>
+              <div class="d3-sector-badge"><span class="chip chip-down" style="font-size:11px;padding:3px 8px;">-0.8%</span></div>
+            </div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><span class="nav-icon">📰</span>Bản tin</div>
+            <div class="nav-item"><span class="nav-icon">📊</span>Thị trường</div>
+            <div class="nav-item"><span class="nav-icon">🔔</span>Cảnh báo</div>
+            <div class="nav-item"><span class="nav-icon">🔍</span>Tìm kiếm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DIRECTION 4: Story Mode
+════════════════════════════════════════ -->
+<div id="dir4" class="direction-panel">
+  <div class="direction-meta">
+    <h2>Direction 4: Story Mode</h2>
+    <p>Full-screen pages, swipe horizontal giữa các sectors. Giống Instagram Stories hoặc Snapchat. Immersive, focused. 1 sector per screen, không bị distract.</p>
+    <div class="tags">
+      <span class="tag">Horizontal swipe</span>
+      <span class="tag">Story pattern</span>
+      <span class="tag">Immersive</span>
+      <span class="tag">One focus at a time</span>
+    </div>
+  </div>
+
+  <div class="phones">
+    <div class="phone-wrap">
+      <div class="phone-label">Page 1: Overview</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-right"><span>📶</span><span>🔋</span></div></div>
+
+          <div style="display:flex;gap:4px;padding:8px 20px 0;">
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--primary);"></div>
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--outline);"></div>
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--outline);"></div>
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--outline);"></div>
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--outline);"></div>
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--outline);"></div>
+          </div>
+
+          <div class="d4-page-header">
+            <div class="d4-page-number">1 / 6 · Tổng quan</div>
+            <div class="d4-page-title">Thị trường sáng nay — tín hiệu tích cực</div>
+          </div>
+
+          <div class="d4-page-body">
+            <div style="display:flex;gap:16px;margin-bottom:20px;">
+              <div style="text-align:center;">
+                <div style="font-size:32px;font-weight:700;color:var(--up);">1,285</div>
+                <div style="font-size:11px;color:var(--text3);">VNINDEX</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-size:32px;font-weight:700;color:var(--up);">+0.8%</div>
+                <div style="font-size:11px;color:var(--text3);">Thay đổi</div>
+              </div>
+            </div>
+
+            <div style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:20px;">
+              Thị trường mở cửa khởi sắc với lực cầu tập trung vào nhóm ngân hàng và BĐS. Dòng tiền ngoại mua ròng, tín hiệu khả quan.
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;gap:10px;background:var(--surface);padding:10px 12px;border-radius:8px;align-items:center;">
+                <span style="color:var(--up);font-size:16px;">▲</span>
+                <span style="font-size:13px;">Ngân hàng, BĐS dẫn dắt</span>
+              </div>
+              <div style="display:flex;gap:10px;background:var(--surface);padding:10px 12px;border-radius:8px;align-items:center;">
+                <span style="color:var(--ref);font-size:16px;">→</span>
+                <span style="font-size:13px;">NN mua ròng 120 tỷ đồng</span>
+              </div>
+              <div style="display:flex;gap:10px;background:var(--surface);padding:10px 12px;border-radius:8px;align-items:center;">
+                <span style="color:var(--down);font-size:16px;">▼</span>
+                <span style="font-size:13px;">Thép, phân bón chịu áp lực</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="d4-nav">
+            <button class="d4-nav-btn" style="opacity:0.4;" disabled>← Trước</button>
+            <button class="d4-nav-btn primary">Ngân hàng →</button>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><span class="nav-icon">📰</span>Bản tin</div>
+            <div class="nav-item"><span class="nav-icon">📊</span>Thị trường</div>
+            <div class="nav-item"><span class="nav-icon">🔔</span>Cảnh báo</div>
+            <div class="nav-item"><span class="nav-icon">🔍</span>Tìm kiếm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone-label">Page 2: Banking</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-right"><span>📶</span><span>🔋</span></div></div>
+
+          <div style="display:flex;gap:4px;padding:8px 20px 0;">
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--primary);opacity:0.4;"></div>
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--primary);"></div>
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--outline);"></div>
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--outline);"></div>
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--outline);"></div>
+            <div style="flex:1;height:3px;border-radius:2px;background:var(--outline);"></div>
+          </div>
+
+          <div class="d4-page-header">
+            <div class="d4-page-number">2 / 6 · 🏦 Ngân hàng</div>
+            <div class="d4-page-title">NIM cải thiện — VCB dẫn đầu nhóm</div>
+          </div>
+
+          <div class="d4-page-body">
+            <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:16px;">
+              <div style="font-size:36px;font-weight:700;color:var(--up);">+1.2%</div>
+              <div style="font-size:13px;color:var(--text2);">so với phiên trước</div>
+            </div>
+
+            <div style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:16px;">
+              NIM các ngân hàng lớn tiếp tục cải thiện nhờ lãi suất huy động giảm. NHNN duy trì chính sách nới lỏng đến Q3. Tăng trưởng tín dụng Q1 đạt 4.2%, vượt kế hoạch.
+            </div>
+
+            <div style="font-size:12px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Cổ phiếu đáng chú ý</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface);padding:10px 12px;border-radius:8px;">
+                <div><div style="font-size:14px;font-weight:600;">VCB</div><div style="font-size:11px;color:var(--text2);">Vietcombank</div></div>
+                <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--up);">+1.8%</div><div style="font-size:11px;color:var(--text3);">96,200đ</div></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface);padding:10px 12px;border-radius:8px;">
+                <div><div style="font-size:14px;font-weight:600;">BID</div><div style="font-size:11px;color:var(--text2);">BIDV</div></div>
+                <div style="text-align:right;"><div style="font-size:14px;font-weight:600;color:var(--up);">+1.2%</div><div style="font-size:11px;color:var(--text3);">47,500đ</div></div>
+              </div>
+            </div>
+            <div class="disclaimer" style="margin-top:12px;">Không phải khuyến nghị đầu tư. Dữ liệu AI tổng hợp.</div>
+            <div class="feedback-row">
+              <button class="fb-btn">✓ Chính xác</button>
+              <button class="fb-btn">✗ Không đúng</button>
+            </div>
+          </div>
+
+          <div class="d4-nav">
+            <button class="d4-nav-btn">← Tổng quan</button>
+            <button class="d4-nav-btn primary">BĐS →</button>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><span class="nav-icon">📰</span>Bản tin</div>
+            <div class="nav-item"><span class="nav-icon">📊</span>Thị trường</div>
+            <div class="nav-item"><span class="nav-icon">🔔</span>Cảnh báo</div>
+            <div class="nav-item"><span class="nav-icon">🔍</span>Tìm kiếm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DIRECTION 5: Minimal Digest
+════════════════════════════════════════ -->
+<div id="dir5" class="direction-panel">
+  <div class="direction-meta">
+    <h2>Direction 5: Minimal Digest</h2>
+    <p>Text-first, minimal chrome. Cảm giác Stratechery hoặc The Information. Typography-driven, ít UI elements. Cho user muốn đọc thật sự, không bị distract bởi màu sắc.</p>
+    <div class="tags">
+      <span class="tag">Text-first</span>
+      <span class="tag">Minimal chrome</span>
+      <span class="tag">Typography-driven</span>
+      <span class="tag">Editorial</span>
+    </div>
+  </div>
+
+  <div class="phones">
+    <div class="phone-wrap">
+      <div class="phone-label">Default state</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-right"><span>📶</span><span>🔋</span></div></div>
+
+          <div class="d5-header">
+            <div class="d5-kicker">✦ Bản tin AI · 01/04/2026</div>
+            <div class="d5-title">Thị trường sáng: Ngân hàng dẫn dắt, dòng tiền ngoại tích cực</div>
+            <div class="d5-timestamp">Cập nhật 07:45 · <span class="badge-live" style="vertical-align:middle;"><span class="dot-pulse"></span>Live</span></div>
+          </div>
+
+          <div class="d5-body">
+            <p class="d5-lead">VNINDEX tăng 10.2 điểm (+0.8%) lên 1,285.4. Thanh khoản đạt 4,230 tỷ đồng, khối ngoại mua ròng 120 tỷ. Nhóm ngân hàng và BĐS dẫn dắt, thép và phân bón chịu áp lực từ giá hàng hóa toàn cầu giảm.</p>
+
+            <div class="d5-sector-title" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'">
+              <span>🏦 Ngân hàng</span>
+              <span class="chip chip-up" style="font-size:11px;padding:2px 8px;">+1.2%</span>
+            </div>
+            <div class="d5-sector-content">
+              NIM cải thiện nhờ lãi suất huy động giảm. Tăng trưởng tín dụng Q1 đạt 4.2%, vượt kế hoạch. VCB và BID được khuyến nghị tích lũy từ nhiều CTCK.
+              <div class="d5-stocks-inline">
+                <span class="chip chip-up" style="font-size:11px;padding:2px 8px;">VCB +1.8%</span>
+                <span class="chip chip-up" style="font-size:11px;padding:2px 8px;">BID +1.2%</span>
+                <span class="chip chip-up" style="font-size:11px;padding:2px 8px;">TCB +0.9%</span>
+              </div>
+              <div class="feedback-row" style="margin-top:10px;">
+                <button class="fb-btn" style="font-size:11px;padding:6px;">✓ Chính xác</button>
+                <button class="fb-btn" style="font-size:11px;padding:6px;">✗ Không đúng</button>
+              </div>
+            </div>
+
+            <div class="d5-sector-title">
+              <span>🏗️ Bất động sản</span>
+              <span class="chip chip-up" style="font-size:11px;padding:2px 8px;">+0.9%</span>
+            </div>
+            <div class="d5-sector-content" style="display:none;">...</div>
+
+            <div class="d5-sector-title">
+              <span>💻 Công nghệ</span>
+              <span class="chip chip-ref" style="font-size:11px;padding:2px 8px;">+0.1%</span>
+            </div>
+            <div class="d5-sector-content" style="display:none;">...</div>
+
+            <div class="d5-sector-title" style="border-bottom:none;">
+              <span>⚡ Năng lượng</span>
+              <span class="chip chip-down" style="font-size:11px;padding:2px 8px;">-0.8%</span>
+            </div>
+            <div class="d5-sector-content" style="display:none;">...</div>
+
+            <div class="disclaimer" style="margin-top:16px;">
+              Nội dung do AI tổng hợp từ dữ liệu thị trường công khai. Không phải khuyến nghị mua/bán. Nhà đầu tư tự chịu trách nhiệm về quyết định đầu tư.
+            </div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><span class="nav-icon">📰</span>Bản tin</div>
+            <div class="nav-item"><span class="nav-icon">📊</span>Thị trường</div>
+            <div class="nav-item"><span class="nav-icon">🔔</span>Cảnh báo</div>
+            <div class="nav-item"><span class="nav-icon">🔍</span>Tìm kiếm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DIRECTION 6: Summary First
+════════════════════════════════════════ -->
+<div id="dir6" class="direction-panel">
+  <div class="direction-meta">
+    <h2>Direction 6: Summary First</h2>
+    <p>Hero card gradient với AI summary ở top. Indices strip. Sector cards compact bên dưới. Hierarchy rõ nhất: summary → macro → sector. Best balance giữa visual impact và scannability.</p>
+    <div class="tags">
+      <span class="tag">Hero summary</span>
+      <span class="tag">Clear hierarchy</span>
+      <span class="tag">Visual impact</span>
+      <span class="tag">Best of both worlds</span>
+    </div>
+  </div>
+
+  <div class="phones">
+    <div class="phone-wrap">
+      <div class="phone-label">Default state</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-right"><span>📶</span><span>🔋</span></div></div>
+
+          <!-- Compact app bar -->
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px 8px;">
+            <div style="font-size:16px;font-weight:700;">Bản tin sáng</div>
+            <div style="display:flex;gap:8px;">
+              <span class="badge-ai">✦ AI</span>
+              <span class="badge-live"><span class="dot-pulse"></span>07:45</span>
+            </div>
+          </div>
+
+          <!-- Hero summary card -->
+          <div class="d6-hero">
+            <div class="d6-hero-label">✦ AI Tóm tắt · 01/04/2026</div>
+            <div class="d6-hero-title">Thị trường tích cực — Ngân hàng và BĐS dẫn dắt</div>
+            <div class="d6-hero-bullets">
+              <div class="d6-bullet"><div class="d6-bullet-dot"></div>VNINDEX +0.8%, thanh khoản 4,230 tỷ đồng</div>
+              <div class="d6-bullet"><div class="d6-bullet-dot"></div>Khối ngoại mua ròng 120 tỷ — tín hiệu tích cực</div>
+              <div class="d6-bullet"><div class="d6-bullet-dot"></div>Thép, phân bón chịu áp lực giá hàng hóa</div>
+            </div>
+          </div>
+
+          <!-- Indices strip -->
+          <div class="d6-indices">
+            <div class="d6-index-chip">
+              <div class="d6-index-name">VNINDEX</div>
+              <div class="d6-index-val" style="color:var(--up);">1,285</div>
+              <div class="d6-index-chg" style="color:var(--up);">+0.8%</div>
+            </div>
+            <div class="d6-index-chip">
+              <div class="d6-index-name">HNX</div>
+              <div class="d6-index-val" style="color:var(--up);">225.7</div>
+              <div class="d6-index-chg" style="color:var(--up);">+0.6%</div>
+            </div>
+            <div class="d6-index-chip">
+              <div class="d6-index-name">VN30</div>
+              <div class="d6-index-val" style="color:var(--down);">1,298</div>
+              <div class="d6-index-chg" style="color:var(--down);">-0.3%</div>
+            </div>
+          </div>
+
+          <!-- Sector cards -->
+          <div class="d6-sectors-label">5 nhóm ngành đáng chú ý</div>
+
+          <div class="d6-sector">
+            <div class="d6-sector-head">
+              <span class="d6-sector-icon">🏦</span>
+              <div class="d6-sector-info">
+                <div class="d6-sector-name">Ngân hàng</div>
+                <div class="d6-sector-sub">NIM cải thiện, VCB dẫn đầu nhóm</div>
+              </div>
+              <span class="chip chip-up" style="font-size:11px;padding:3px 8px;">+1.2%</span>
+            </div>
+          </div>
+
+          <div class="d6-sector">
+            <div class="d6-sector-head">
+              <span class="d6-sector-icon">🏗️</span>
+              <div class="d6-sector-info">
+                <div class="d6-sector-name">Bất động sản</div>
+                <div class="d6-sector-sub">Lãi suất hạ hỗ trợ phục hồi ngắn hạn</div>
+              </div>
+              <span class="chip chip-up" style="font-size:11px;padding:3px 8px;">+0.9%</span>
+            </div>
+          </div>
+
+          <div class="d6-sector">
+            <div class="d6-sector-head">
+              <span class="d6-sector-icon">💻</span>
+              <div class="d6-sector-info">
+                <div class="d6-sector-name">Công nghệ</div>
+                <div class="d6-sector-sub">Chờ kết quả Q1, FPT ổn định</div>
+              </div>
+              <span class="chip chip-ref" style="font-size:11px;padding:3px 8px;">+0.1%</span>
+            </div>
+          </div>
+
+          <div class="d6-sector">
+            <div class="d6-sector-head">
+              <span class="d6-sector-icon">⚡</span>
+              <div class="d6-sector-info">
+                <div class="d6-sector-name">Năng lượng</div>
+                <div class="d6-sector-sub">Giá dầu giảm 2.1% tạo áp lực</div>
+              </div>
+              <span class="chip chip-down" style="font-size:11px;padding:3px 8px;">-0.8%</span>
+            </div>
+          </div>
+
+          <div class="d6-sector" style="margin-bottom:16px;">
+            <div class="d6-sector-head">
+              <span class="d6-sector-icon">🛒</span>
+              <div class="d6-sector-info">
+                <div class="d6-sector-name">Tiêu dùng</div>
+                <div class="d6-sector-sub">Sức mua cải thiện, MWG phục hồi</div>
+              </div>
+              <span class="chip chip-up" style="font-size:11px;padding:3px 8px;">+0.5%</span>
+            </div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><span class="nav-icon">📰</span>Bản tin</div>
+            <div class="nav-item"><span class="nav-icon">📊</span>Thị trường</div>
+            <div class="nav-item"><span class="nav-icon">🔔</span>Cảnh báo</div>
+            <div class="nav-item"><span class="nav-icon">🔍</span>Tìm kiếm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <div class="phone-label">Sector expanded</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="status-bar"><span>9:41</span><div class="status-right"><span>📶</span><span>🔋</span></div></div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px 8px;">
+            <div style="font-size:16px;font-weight:700;">Bản tin sáng</div>
+            <span class="badge-ai">✦ AI</span>
+          </div>
+
+          <!-- Hero (compact when scrolled) -->
+          <div style="margin:0 16px 12px;padding:12px 14px;border-radius:12px;background:linear-gradient(135deg,#1D4ED8,#1E293B);border:1px solid rgba(59,130,246,0.3);">
+            <div style="font-size:11px;color:rgba(255,255,255,0.6);font-weight:600;">✦ AI TÓM TẮT</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:4px;line-height:1.5;">VNINDEX +0.8% · Ngân hàng dẫn dắt · NN mua ròng 120 tỷ</div>
+          </div>
+
+          <!-- Expanded sector card -->
+          <div style="margin:0 16px 10px;border-radius:12px;background:var(--surface);border:1px solid var(--primary);overflow:hidden;">
+            <div style="display:flex;align-items:center;padding:12px 14px;gap:10px;background:rgba(59,130,246,0.06);">
+              <span style="font-size:18px;">🏦</span>
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:600;">Ngân hàng</div>
+                <div style="font-size:11px;color:var(--text2);">Đang xem chi tiết</div>
+              </div>
+              <span class="chip chip-up" style="font-size:11px;padding:3px 8px;">+1.2%</span>
+              <span style="color:var(--primary);font-size:12px;">▲</span>
+            </div>
+            <div style="padding:12px 14px;border-top:1px solid var(--outline);">
+              <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:10px;">
+                NIM cải thiện nhờ lãi suất huy động giảm. Tăng trưởng tín dụng Q1 đạt 4.2%, vượt kế hoạch. VCB và BID được khuyến nghị tích lũy.
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                <span class="chip chip-up">VCB +1.8%</span>
+                <span class="chip chip-up">BID +1.2%</span>
+                <span class="chip chip-up">TCB +0.9%</span>
+                <span class="chip chip-ref">MBB +0.1%</span>
+                <span class="chip chip-down">CTG -0.3%</span>
+              </div>
+              <div class="disclaimer">AI tổng hợp. Không phải khuyến nghị đầu tư.</div>
+              <div class="feedback-row">
+                <button class="fb-btn">✓ Chính xác</button>
+                <button class="fb-btn">✗ Không đúng</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Remaining sectors collapsed -->
+          <div class="d6-sector">
+            <div class="d6-sector-head">
+              <span class="d6-sector-icon">🏗️</span>
+              <div class="d6-sector-info">
+                <div class="d6-sector-name">Bất động sản</div>
+                <div class="d6-sector-sub">Lãi suất hạ hỗ trợ phục hồi</div>
+              </div>
+              <span class="chip chip-up" style="font-size:11px;padding:3px 8px;">+0.9%</span>
+            </div>
+          </div>
+
+          <div class="d6-sector" style="margin-bottom:16px;">
+            <div class="d6-sector-head">
+              <span class="d6-sector-icon">💻</span>
+              <div class="d6-sector-info">
+                <div class="d6-sector-name">Công nghệ</div>
+                <div class="d6-sector-sub">Chờ kết quả Q1</div>
+              </div>
+              <span class="chip chip-ref" style="font-size:11px;padding:3px 8px;">+0.1%</span>
+            </div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><span class="nav-icon">📰</span>Bản tin</div>
+            <div class="nav-item"><span class="nav-icon">📊</span>Thị trường</div>
+            <div class="nav-item"><span class="nav-icon">🔔</span>Cảnh báo</div>
+            <div class="nav-item"><span class="nav-icon">🔍</span>Tìm kiếm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     Comparison table (shown on all tabs)
+     Only for dir1 as summary anchor
+════════════════════════════════════════ -->
+<div style="max-width:800px;margin:48px auto 64px;padding:0 24px;">
+  <h3 style="font-size:16px;font-weight:600;color:var(--text2);margin-bottom:16px;">So sánh 6 directions</h3>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Direction</th>
+        <th>Scan speed</th>
+        <th>Depth</th>
+        <th>Familiarity</th>
+        <th>Implement</th>
+        <th>Best for</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1 · Card Stack</td>
+        <td>Fast</td>
+        <td>On-demand</td>
+        <td>High</td>
+        <td>Easy</td>
+        <td>Most users</td>
+      </tr>
+      <tr>
+        <td>2 · Feed Style</td>
+        <td>Medium</td>
+        <td>Full visible</td>
+        <td>High</td>
+        <td>Easy</td>
+        <td>Readers</td>
+      </tr>
+      <tr>
+        <td>3 · Dashboard</td>
+        <td>Very fast</td>
+        <td>Medium</td>
+        <td>Medium</td>
+        <td>Easy</td>
+        <td>Power users</td>
+      </tr>
+      <tr>
+        <td>4 · Story Mode</td>
+        <td>Slow</td>
+        <td>Full</td>
+        <td>Medium</td>
+        <td>Complex</td>
+        <td>Engagement</td>
+      </tr>
+      <tr>
+        <td>5 · Minimal</td>
+        <td>Fast</td>
+        <td>On-demand</td>
+        <td>High</td>
+        <td>Easy</td>
+        <td>Text lovers</td>
+      </tr>
+      <tr style="background:rgba(59,130,246,0.05);">
+        <td><strong>6 · Summary First</strong> <span class="star">★</span></td>
+        <td><strong>Fast</strong></td>
+        <td><strong>On-demand</strong></td>
+        <td><strong>High</strong></td>
+        <td><strong>Medium</strong></td>
+        <td><strong>Balanced</strong></td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px;color:var(--text3);margin-top:12px;"><span class="star">★</span> Direction 6 recommended — best matches FTrade's "2-minute morning brief" core loop và emotional goals.</p>
+</div>
+
+<script>
+function showDir(n, btn) {
+  document.querySelectorAll('.direction-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('dir' + n).classList.add('active');
+  btn.classList.add('active');
+}
+
+// Sector toggle for D1
+document.querySelectorAll('.d1-sector-header').forEach(h => {
+  h.addEventListener('click', () => {
+    h.closest('.d1-sector').classList.toggle('expanded');
+  });
+});
+</script>
+</body>
+</html>

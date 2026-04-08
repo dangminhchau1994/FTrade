@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "819686594404",
+    "project_id": "ftrade-209d5",
+    "storage_bucket": "ftrade-209d5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:819686594404:android:e2c8589e35e06bc28c4c71",
+        "android_client_info": {
+          "package_name": "com.ftrade.ftrade"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWckX7e-CPqFeI5KK5pOB7FDMb8Pyt7Gk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

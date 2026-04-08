@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/home/presentation/screens/home_screen.dart';
+import '../../features/morning_brief/presentation/screens/morning_brief_screen.dart';
 import '../../features/market/presentation/screens/market_screen.dart';
 import '../../features/market/presentation/screens/search_screen.dart';
 import '../../features/market/presentation/screens/index_detail_screen.dart';
@@ -20,7 +21,7 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/home',
+  initialLocation: '/brief',
   routes: [
     // Full-screen routes (no bottom nav)
     GoRoute(
@@ -80,6 +81,14 @@ final appRouter = GoRouter(
         return ScaffoldWithNavBar(navigationShell: navigationShell);
       },
       branches: [
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/brief',
+              builder: (context, state) => const MorningBriefScreen(),
+            ),
+          ],
+        ),
         StatefulShellBranch(
           routes: [
             GoRoute(
