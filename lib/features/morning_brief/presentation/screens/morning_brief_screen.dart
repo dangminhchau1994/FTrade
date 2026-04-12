@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/presentation/widgets/tos_bottom_sheet.dart';
-import '../../../watchlist/presentation/providers/watchlist_providers.dart';
+import '../../../watchlist/domain/entities/watchlist_group.dart';
+import '../../../watchlist/presentation/providers/watchlist_group_provider.dart';
 import '../providers/morning_brief_provider.dart';
 import '../widgets/ai_summary_hero_card.dart';
 import '../widgets/sector_card.dart';
@@ -135,7 +136,7 @@ class _MorningBriefScreenState extends ConsumerState<MorningBriefScreen> {
                             ),
                           );
                       }),
-                      _AiWatchlistBanner(brief: brief),
+                      _AiWatchlistGroupBanner(brief: brief),
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: Text(
@@ -182,25 +183,21 @@ class _MorningBriefScreenState extends ConsumerState<MorningBriefScreen> {
   }
 }
 
-class _AiWatchlistBanner extends ConsumerWidget {
+class _AiWatchlistGroupBanner extends ConsumerWidget {
   final dynamic brief;
-  const _AiWatchlistBanner({required this.brief});
+  const _AiWatchlistGroupBanner({required this.brief});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final watchlist = ref.watch(watchlistSymbolsProvider);
-    final notifier = ref.read(watchlistSymbolsProvider.notifier);
+    final groupsNotifier = ref.read(watchlistGroupsProvider.notifier);
+    final alreadyCreated = groupsNotifier.hasGroupForBriefDate(brief.date as String);
 
-    // Collect all unique symbols from all sectors
-    final allSymbols = <String>{};
-    for (final sector in brief.sectors) {
-      for (final stock in sector.stocks) {
-        allSymbols.add(stock.symbol as String);
-      }
-    }
-    final newSymbols = allSymbols.where((s) => !watchlist.contains(s)).toList();
+    // Count sectors that have stocks
+    final sectorsWithStocks = (brief.sectors as List)
+        .where((s) => (s.stocks as List).isNotEmpty)
+        .toList();
 
-    if (allSymbols.isEmpty) return const SizedBox.shrink();
+    if (sectorsWithStocks.isEmpty) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -216,32 +213,60 @@ class _AiWatchlistBanner extends ConsumerWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              newSymbols.isEmpty
-                  ? 'Đã theo dõi tất cả ${allSymbols.length} mã AI gợi ý ✓'
-                  : 'AI gợi ý ${allSymbols.length} mã hôm nay',
+              alreadyCreated
+                  ? 'Đã tạo ${sectorsWithStocks.length} nhóm Watchlist AI ✓'
+                  : 'AI gợi ý ${sectorsWithStocks.length} nhóm cổ phiếu hôm nay',
               style: const TextStyle(fontSize: 13, color: Color(0xFFF59E0B)),
             ),
           ),
-          if (newSymbols.isNotEmpty)
+          if (!alreadyCreated)
             TextButton(
-              onPressed: () {
-                for (final s in newSymbols) { notifier.add(s); }
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Đã thêm ${newSymbols.length} mã vào Watchlist ⭐'),
-                  duration: const Duration(seconds: 2),
-                ));
-              },
+              onPressed: () => _createGroups(context, ref, sectorsWithStocks),
               style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFFF59E0B),
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: Text('Thêm tất cả (${newSymbols.length})', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              child: const Text('Tạo Watchlist AI', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
             ),
         ]),
       ),
     );
+  }
+
+  Future<void> _createGroups(BuildContext context, WidgetRef ref, List sectors) async {
+    final groupsNotifier = ref.read(watchlistGroupsProvider.notifier);
+    final briefDate = brief.date as String;
+
+    // Parse dd/MM/YYYY from briefDate (e.g. "2026-04-12") → "12/04"
+    String shortDate = briefDate;
+    try {
+      final parts = briefDate.split('-');
+      if (parts.length == 3) shortDate = '${parts[2]}/${parts[1]}';
+    } catch (_) {}
+
+    for (final sector in sectors) {
+      final symbols = (sector.stocks as List).map((s) => s.symbol as String).toList();
+      if (symbols.isEmpty) continue;
+      final group = WatchlistGroup(
+        id: 'ai_${briefDate}_${sector.sectorId}',
+        name: '${sector.sectorName} · AI $shortDate',
+        symbols: symbols,
+        createdAt: DateTime.now(),
+        isAiGenerated: true,
+        briefDate: briefDate,
+        sectorId: sector.sectorId as String,
+      );
+      await groupsNotifier.addGroup(group);
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Đã tạo ${sectors.length} nhóm Watchlist AI ⭐'),
+        duration: const Duration(seconds: 2),
+      ));
+    }
   }
 }
 

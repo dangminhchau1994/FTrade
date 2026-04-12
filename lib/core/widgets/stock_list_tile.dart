@@ -14,6 +14,7 @@ class StockListTile extends ConsumerWidget {
   final double? ceiling;
   final double? floor;
   final double? refPrice;
+  final String? companyName;
   final VoidCallback? onTap;
 
   const StockListTile({
@@ -26,6 +27,7 @@ class StockListTile extends ConsumerWidget {
     this.ceiling,
     this.floor,
     this.refPrice,
+    this.companyName,
     this.onTap,
   });
 
@@ -83,13 +85,17 @@ class StockListTile extends ConsumerWidget {
               ),
             ),
             Expanded(
-              child: Text(
-                'KL: ${FormatUtils.volume(displayVolume)}',
-                style: TextStyle(
-                  color: Colors.grey[500],
-                  fontSize: 12,
-                ),
-              ),
+              child: companyName != null
+                  ? Text(
+                      companyName!,
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  : Text(
+                      'KL: ${FormatUtils.volume(displayVolume)}',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    ),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,

@@ -215,5 +215,18 @@
 - [x] CÒN LẠI: Tạo subscription `ftrade_premium_monthly` trên App Store Connect + Google Play
 - [x] CÒN LẠI: Thêm secrets `APPLE_SHARED_SECRET`, `GOOGLE_PLAY_SERVICE_ACCOUNT`
 
+### 2026-04-12 - Epic 6: Smart Watchlist (đang làm)
+- [x] `WatchlistGroup` entity — id, name, symbols, createdAt, isAiGenerated, briefDate, sectorId
+- [x] `WatchlistGroupsNotifier` — Hive-backed StateNotifier, addGroup/removeGroup/addSymbol/removeSymbol
+- [x] `groupStocksProvider` — FutureProvider.family keyed by groupId, fetch live prices
+- [x] `WatchlistScreen` rewrite — 2 sections: "Watchlist AI" (gold, AI groups) + "Watchlist của bạn" (user groups)
+- [x] `_AiGroupCard` — expandable, linear list (StockListTile + company name lazy load), swipe xóa symbol
+- [x] `StockListTile` — thêm optional `companyName` param, hiển thị tên công ty thay volume khi có
+- [x] `_AiWatchlistGroupBanner` trên MorningBriefScreen — tạo 1 group per sector (không add flat)
+  - Tên group: "{SectorName} · AI dd/MM", isAiGenerated=true, lưu Hive
+  - Idempotent: check hasGroupForBriefDate() trước khi tạo
+- [ ] CÒN LẠI: User-created watchlist groups ("+": tạo group thủ công, add mã vào group)
+- [ ] CÒN LẠI: Xóa section "Theo dõi thủ công" (flat list), thay bằng user-created groups
+
 ## Phase 4: Giao dịch (chưa bắt đầu)
 - [ ] Tích hợp VNDirect API, vào lệnh tự động

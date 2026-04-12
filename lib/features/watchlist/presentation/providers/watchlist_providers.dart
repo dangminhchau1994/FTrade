@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../market/domain/entities/stock.dart';
 import '../../../market/presentation/providers/market_providers.dart';
+import 'watchlist_group_provider.dart';
 
 const _boxName = 'watchlist';
 
@@ -54,4 +55,13 @@ final watchlistStocksProvider = FutureProvider<List<Stock>>((ref) async {
   if (symbols.isEmpty) return [];
 
   return ref.watch(marketApiDatasourceProvider).getStocksBySymbols(symbols);
+});
+
+/// Fetch live prices for all symbols in an AI watchlist group.
+/// Keyed by group id so Riverpod caches per group.
+final groupStocksProvider = FutureProvider.family<List<Stock>, String>((ref, groupId) async {
+  final groups = ref.watch(watchlistGroupsProvider);
+  final group = groups.where((g) => g.id == groupId).firstOrNull;
+  if (group == null || group.symbols.isEmpty) return [];
+  return ref.watch(marketApiDatasourceProvider).getStocksBySymbols(group.symbols);
 });
