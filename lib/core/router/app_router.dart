@@ -15,6 +15,7 @@ import '../../features/corporate/presentation/screens/corporate_screen.dart';
 import '../../features/money_flow/presentation/screens/money_flow_screen.dart';
 import '../../features/fundamental/presentation/screens/financial_statement_screen.dart';
 import '../../features/fundamental/presentation/screens/industry_comparison_screen.dart';
+import '../../features/premium/presentation/screens/paywall_screen.dart';
 import 'scaffold_with_nav_bar.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -42,6 +43,11 @@ final appRouter = GoRouter(
       path: '/search',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const SearchScreen(),
+    ),
+    GoRoute(
+      path: '/paywall',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const PaywallScreen(),
     ),
     GoRoute(
       path: '/news/:id',

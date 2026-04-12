@@ -117,7 +117,7 @@ class _SectorCardState extends State<SectorCard> {
               const Text('Premium', style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
               const SizedBox(width: 16),
               FilledButton.tonal(
-                onPressed: () {},
+                onPressed: () => context.push('/paywall'),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   minimumSize: Size.zero,

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/constants/app_constants.dart';
 import 'core/router/app_router.dart';
 import 'core/services/fcm_service.dart';
+import 'core/services/iap_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/storage/hive_storage.dart';
 import 'core/theme/app_theme.dart';
@@ -32,6 +33,7 @@ void main() async {
   await NotificationService.init();
   await _ensureAnonymousAuth();
   await FcmService.init();
+  await IapService.init();
   runApp(const ProviderScope(child: FTradeApp()));
 }
 
