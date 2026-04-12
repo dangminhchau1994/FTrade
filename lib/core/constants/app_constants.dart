@@ -1,5 +1,5 @@
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AppConstants {
   AppConstants._();
@@ -9,7 +9,7 @@ class AppConstants {
 
   /// Enable Firebase emulator suite in debug mode.
   /// Set to false to hit production even in debug builds.
-  static const bool useEmulators = kDebugMode;
+  static const bool useEmulators = false; // Dùng Firebase production + Vercel backend
 
   static const String emulatorHost = '127.0.0.1';
 
@@ -27,11 +27,14 @@ class AppConstants {
   static const String firebaseProjectId = 'ftrade-209d5';
   static const String firebaseRegion = 'asia-southeast1';
 
-  /// Functions base URL — switches between emulator and production
+  /// Vercel backend URL — set production URL after deploy
+  static const String _vercelProductionUrl = 'https://ftrade-backend.vercel.app'; // deployed 2026-04-12
+
   static String get functionsBaseUrl {
     if (useEmulators) {
-      return 'http://$emulatorHostForDevice:$functionsEmulatorPort/$firebaseProjectId/$firebaseRegion';
+      // Local Vercel dev: `vercel dev` runs on port 3000
+      return 'http://$emulatorHostForDevice:3000/api';
     }
-    return 'https://$firebaseRegion-$firebaseProjectId.cloudfunctions.net';
+    return '$_vercelProductionUrl/api';
   }
 }

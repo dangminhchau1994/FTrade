@@ -1,0 +1,19 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".",
+  "regions": ["sin1"],
+  "functions": {
+    "api/cron/generate-brief.ts": { "maxDuration": 60 },
+    "api/cron/evaluate-accuracy.ts": { "maxDuration": 60 }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/generate-brief",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/evaluate-accuracy",
+      "schedule": "30 8 * * 1-5"
+    }
+  ]
+}

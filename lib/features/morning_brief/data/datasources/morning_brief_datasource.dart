@@ -26,7 +26,7 @@ class MorningBriefDatasource {
 
   Future<MorningBrief?> fetchBrief({String? date}) async {
     final token = await _idToken();
-    final url = '${AppConstants.functionsBaseUrl}/morningBriefs';
+    final url = '${AppConstants.functionsBaseUrl}/morning-briefs';
     debugPrint('📰 Fetching brief from: $url');
 
     final response = await _dio.get<Map<String, dynamic>>(
@@ -87,7 +87,7 @@ class MorningBriefDatasource {
     try {
       final token = await _idToken();
       await _dio.post<Map<String, dynamic>>(
-        '${AppConstants.functionsBaseUrl}/feedback',
+        '${AppConstants.functionsBaseUrl}/feedback',  // POST /api/feedback
         data: {
           'briefDate': briefDate,
           'sectorId': sectorId,
@@ -109,7 +109,7 @@ class MorningBriefDatasource {
     try {
       final token = await _idToken();
       final resp = await _dio.get<Map<String, dynamic>>(
-        '${AppConstants.functionsBaseUrl}/feedback/$briefDate',
+        '${AppConstants.functionsBaseUrl}/feedback?date=$briefDate',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       if (resp.data?['success'] == true && resp.data?['data'] != null) {

@@ -1,0 +1,39 @@
+name: Generate Morning Brief
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 7:00 AM VN (UTC+7) = 0:00 UTC
+  workflow_dispatch:       # Manual trigger từ GitHub UI
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Generate Morning Brief
+        run: npx ts-node --esm run-generate-brief.ts
+        working-directory: backend
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          DRY_RUN: 'false'
+
+      - name: Evaluate Accuracy (weekdays only)
+        if: ${{ !contains(fromJson('["Saturday","Sunday"]'), steps.day.outputs.day) }}
+        run: npx ts-node --esm run-evaluate-accuracy.ts
+        working-directory: backend
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

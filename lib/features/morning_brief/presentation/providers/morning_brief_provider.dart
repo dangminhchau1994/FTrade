@@ -13,8 +13,10 @@ final morningBriefProvider = FutureProvider<MorningBrief?>((ref) async {
   } catch (e, st) {
     debugPrint('📰 Morning brief fetch failed: $e');
     debugPrint('📰 Stack: $st');
-    // Network failed — return cached
-    return _datasource.getCachedBrief();
+    // Network failed — try cache first
+    final cached = await _datasource.getCachedBrief();
+    if (cached != null) return cached;
+    rethrow; // No cache → show error state (not empty/"7h30" state)
   }
 });
 
