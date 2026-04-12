@@ -88,7 +88,7 @@ export async function generateBriefWithAI(
 
   const response = await client.chat.completions.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_completion_tokens: 4096,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: systemPrompt },
