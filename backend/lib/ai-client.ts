@@ -4,7 +4,7 @@ import { FORBIDDEN_PHRASES, MorningBrief, VN_SECTORS } from "./types";
 const getApiKey = () => process.env.OPENAI_API_KEY ?? "";
 const isDryRun = () => process.env.DRY_RUN?.trim() === "true";
 
-const MODEL = "gpt-5.1";
+const MODEL = "gpt-5.4";
 
 const FAKE_BRIEF = {
   summary: [
@@ -116,10 +116,10 @@ export async function generateBriefWithAI(
   const parsed = JSON.parse(rawText);
   injectDisclaimers(parsed);
 
-  // Cost: gpt-5.1 = $1.25/1M input, $10.00/1M output
+  // Cost: gpt-5.4 = $2.50/1M input, $15.00/1M output
   const promptTokens = response.usage?.prompt_tokens ?? 0;
   const completionTokens = response.usage?.completion_tokens ?? 0;
-  const costUsd = (promptTokens * 1.25 + completionTokens * 10.00) / 1_000_000;
+  const costUsd = (promptTokens * 2.50 + completionTokens * 15.00) / 1_000_000;
 
   return { brief: parsed, tokens: { prompt: promptTokens, completion: completionTokens }, costUsd };
 }
