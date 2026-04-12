@@ -122,7 +122,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               ],
               // Subscribe button
               FilledButton(
-                onPressed: _loading || _purchasing ? null : _buy,
+                onPressed: _loading || _purchasing || _product == null ? null : _buy,
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFFF59E0B),
                   foregroundColor: Colors.black,
@@ -132,7 +132,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                 child: _purchasing
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
                     : Text(
-                        _loading ? 'Đang tải...' : (_product?.price ?? 'Đăng ký Premium'),
+                        _loading
+                            ? 'Đang tải...'
+                            : _product == null
+                                ? 'Không khả dụng trên thiết bị này'
+                                : _product!.price,
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
               ),

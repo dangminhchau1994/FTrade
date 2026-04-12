@@ -24,18 +24,29 @@ class IapService {
   static String? get lastError => _lastError;
 
   static Future<void> init() async {
-    _sub?.cancel();
-    _sub = _iap.purchaseStream.listen(_onPurchases, onError: (e) {
-      debugPrint('IAP stream error: $e');
-    });
+    try {
+      final available = await _iap.isAvailable();
+      if (!available) { debugPrint('IAP not available on this device'); return; }
+      _sub?.cancel();
+      _sub = _iap.purchaseStream.listen(_onPurchases, onError: (e) {
+        debugPrint('IAP stream error: $e');
+      });
+    } catch (e) {
+      debugPrint('IAP init error (simulator?): $e');
+    }
   }
 
   static Future<ProductDetails?> loadProduct() async {
-    final available = await _iap.isAvailable();
-    if (!available) return null;
-    final resp = await _iap.queryProductDetails({productId});
-    if (resp.productDetails.isEmpty) return null;
-    return resp.productDetails.first;
+    try {
+      final available = await _iap.isAvailable();
+      if (!available) return null;
+      final resp = await _iap.queryProductDetails({productId});
+      if (resp.productDetails.isEmpty) return null;
+      return resp.productDetails.first;
+    } catch (e) {
+      debugPrint('IAP loadProduct error (simulator?): $e');
+      return null;
+    }
   }
 
   static Future<bool> buyPremium(ProductDetails product) async {
@@ -50,7 +61,11 @@ class IapService {
   }
 
   static Future<void> restorePurchases() async {
-    await _iap.restorePurchases();
+    try {
+      await _iap.restorePurchases();
+    } catch (e) {
+      debugPrint('IAP restore error: $e');
+    }
   }
 
   static Future<void> _onPurchases(List<PurchaseDetails> purchases) async {
