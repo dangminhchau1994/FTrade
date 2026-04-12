@@ -1,8 +1,8 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { db } from "./lib/firebase-admin.js";
+import { db } from "./lib/firebase-admin";
 import axios from "axios";
-import type { MorningBrief, SectorAnalysis, AccuracyLog } from "./lib/types.js";
-import { VN_SECTORS } from "./lib/types.js";
+import type { MorningBrief, SectorAnalysis, AccuracyLog } from "./lib/types";
+import { VN_SECTORS } from "./lib/types";
 
 function todayVN(): string {
   const vn = new Date(Date.now() + 7 * 60 * 60 * 1000);
