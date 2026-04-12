@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../data/models/morning_brief.dart';
+import '../../../../features/watchlist/presentation/providers/watchlist_providers.dart';
 
 class SectorCard extends StatefulWidget {
   final SectorAnalysis sector;
@@ -254,24 +256,66 @@ class _SectorCardState extends State<SectorCard> {
   }
 }
 
-class _StockChip extends StatelessWidget {
+class _StockChip extends ConsumerWidget {
   final StockMention stock;
   const _StockChip({required this.stock});
 
+  void _showOptions(BuildContext context, WidgetRef ref) {
+    final watchlist = ref.read(watchlistSymbolsProvider.notifier);
+    final inWatchlist = ref.read(watchlistSymbolsProvider).contains(stock.symbol);
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: const Icon(Icons.candlestick_chart_outlined),
+            title: Text('Xem ${stock.symbol}'),
+            onTap: () { Navigator.pop(context); context.push('/stock/${stock.symbol}'); },
+          ),
+          ListTile(
+            leading: Icon(inWatchlist ? Icons.star : Icons.star_outline,
+                color: inWatchlist ? const Color(0xFFF59E0B) : null),
+            title: Text(inWatchlist ? 'Xóa khỏi Watchlist' : 'Thêm vào Watchlist'),
+            onTap: () {
+              Navigator.pop(context);
+              if (inWatchlist) {
+                watchlist.remove(stock.symbol);
+              } else {
+                watchlist.add(stock.symbol);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Đã thêm ${stock.symbol} vào Watchlist ⭐'), duration: const Duration(seconds: 2)),
+                );
+              }
+            },
+          ),
+        ]),
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final inWatchlist = ref.watch(watchlistSymbolsProvider).contains(stock.symbol);
+    final cs = Theme.of(context).colorScheme;
     return Tooltip(
       message: stock.reason,
       child: GestureDetector(
         onTap: () => context.push('/stock/${stock.symbol}'),
+        onLongPress: () => _showOptions(context, ref),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            color: inWatchlist ? const Color(0xFFF59E0B).withValues(alpha: 0.12) : cs.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+            border: Border.all(color: inWatchlist ? const Color(0xFFF59E0B) : cs.outlineVariant),
           ),
-          child: Text(stock.symbol, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (inWatchlist) ...[
+              const Icon(Icons.star, size: 10, color: Color(0xFFF59E0B)),
+              const SizedBox(width: 4),
+            ],
+            Text(stock.symbol, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          ]),
         ),
       ),
     );

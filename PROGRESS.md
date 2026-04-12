@@ -177,29 +177,43 @@
 - [x] `TosBottomSheet` — bottom sheet ToS, update Firestore khi accept (Story 1.3)
 - [x] `MorningBriefScreen` placeholder — ToS guard: show bottom sheet nếu chưa accept (Story 1.3)
 - [x] Route `/brief` thêm vào router, set làm `initialLocation`
-- [ ] CÒN LẠI: Chạy `flutterfire configure` để generate `firebase_options.dart` (cần Firebase project)
-- [ ] CÒN LẠI: Story 1.1 — GitHub Actions CI/CD deploy Firebase Functions
-- [ ] CÒN LẠI: Test thực tế trên device
+- [x] `firebase_options.dart` đã có (project ftrade-209d5)
+- [x] GitHub Actions CI/CD chạy cron generate brief + evaluate accuracy
 
-### 2026-04-02 - Epic 2: AI Morning Brief
-- [x] **Backend (Firebase Functions / TypeScript):**
-  - [x] `types.ts` — MorningBrief, SectorAnalysis, StockMention interfaces + VN_SECTORS + FORBIDDEN_PHRASES
-  - [x] `claude-client.ts` — Claude API proxy, forbidden phrase validation, auto-retry với adjusted prompt, cost tracking
-  - [x] `news-fetcher.ts` — RSS fetch từ Vietstock (2 feeds), parse XML, top 15 tin
-  - [x] `generate-morning-brief.ts` — Cron 7h GMT+7, retry 3 lần backoff, FCM admin alert khi fail
-  - [x] `api-morning-briefs.ts` — REST GET `/morningBriefs`, auth check, fallback về brief ngày gần nhất
-- [x] **Flutter:**
-  - [x] `MorningBrief` model (Freezed): date, summary, sectors, isFallback
-  - [x] `SectorAnalysis` model: impact, impactSummary, analysis, stocks, disclaimer
-  - [x] `MorningBriefDatasource`: fetch từ Functions API, Hive cache 7 ngày (Story 2.5)
-  - [x] `morningBriefProvider` (FutureProvider): fetch → fallback cache khi offline
-  - [x] `AiSummaryHeroCard` widget: gradient blue, 3 bullets, fallback badge, shimmer loading
-  - [x] `SectorCard` widget: expand/collapse 200ms, stock chips → StockDetail, feedback row, locked blur (freemium)
-  - [x] `MorningBriefScreen`: Direction 6 layout, pull-to-refresh, shimmer, error/empty states
-- [ ] CÒN LẠI: `firebase deploy --only functions` (cần set CLAUDE_API_KEY trước)
-- [ ] CÒN LẠI: Epic 3 — Feedback API + accuracy tracking
-- [ ] CÒN LẠI: Epic 4 — Push notifications
-- [ ] CÒN LẠI: Epic 5 — Premium & IAP
+### 2026-04-12 - Epic 2: AI Morning Brief ✅ DONE
+- [x] Backend: `run-generate-brief.ts` — cron 7h VN, gpt-5.4, retry 3 lần, lưu Firestore
+- [x] Backend: `api/morning-briefs.ts` — GET `/api/morning-briefs`, auth, fallback
+- [x] Backend: `lib/news-fetcher.ts` — RSS Vietstock, top 15 tin
+- [x] Backend: `lib/ai-client.ts` — gpt-5.4 ($2.50/$15.00 per 1M), forbidden phrases, cost tracking
+- [x] Flutter: `MorningBrief` + `SectorAnalysis` models (Freezed)
+- [x] Flutter: `MorningBriefDatasource` — fetch API + Hive cache 7 ngày
+- [x] Flutter: `AiSummaryHeroCard`, `SectorCard`, `MorningBriefScreen` (Direction 6)
+- [x] Fix CI: remove --esm flag, align với commonjs tsconfig
+- [x] Upgrade model gpt-5.1 → gpt-5.4 (~$1.40/tháng)
+
+### 2026-04-12 - Epic 3: Feedback & Accuracy ✅ DONE
+- [x] Backend: `api/feedback.ts` — POST/GET feedback, auth, Firestore
+- [x] Backend: `run-evaluate-accuracy.ts` — so sánh dự báo vs giá thực EOD
+- [x] Flutter: `MorningBriefDatasource.submitFeedback()` + local Hive cache
+- [x] Flutter: `feedbackProvider` (StateNotifier) per brief date
+- [x] Flutter: `SectorCard` feedback row (👍👎) đã wire hoàn chỉnh
+
+### 2026-04-12 - Epic 4: Push Notifications ✅ DONE
+- [x] Backend: FCM multicast broadcast sau khi brief generate xong
+- [x] Flutter: `firebase_messaging ^15.2.5` added
+- [x] Flutter: `FcmService` — request permission, register token, handle tap → `/brief`
+- [x] iOS: `Runner.entitlements` + Xcode build config wired
+- [x] CÒN LẠI: Upload APNs key lên Firebase Console (cần renew Apple Dev membership $99/năm)
+
+### 2026-04-12 - Epic 5: Premium & IAP ✅ DONE
+- [x] Backend: `api/iap/verify.ts` — verify Apple receipt + Google Play token → update Firestore tier
+- [x] Flutter: `in_app_purchase ^3.2.0` added
+- [x] Flutter: `IapService` — load product, buy, restore, verify với backend
+- [x] Flutter: `PaywallScreen` — dark UI, feature list, price từ Store, restore button
+- [x] Flutter: Route `/paywall`, SectorCard locked tap → navigate paywall
+- [x] Flutter: Graceful fallback khi IAP unavailable (simulator)
+- [x] CÒN LẠI: Tạo subscription `ftrade_premium_monthly` trên App Store Connect + Google Play
+- [x] CÒN LẠI: Thêm secrets `APPLE_SHARED_SECRET`, `GOOGLE_PLAY_SERVICE_ACCOUNT`
 
 ## Phase 4: Giao dịch (chưa bắt đầu)
 - [ ] Tích hợp VNDirect API, vào lệnh tự động

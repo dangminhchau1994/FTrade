@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../auth/presentation/widgets/tos_bottom_sheet.dart';
+import '../../../watchlist/presentation/providers/watchlist_providers.dart';
 import '../providers/morning_brief_provider.dart';
 import '../widgets/ai_summary_hero_card.dart';
 import '../widgets/sector_card.dart';
@@ -134,6 +135,7 @@ class _MorningBriefScreenState extends ConsumerState<MorningBriefScreen> {
                             ),
                           );
                       }),
+                      _AiWatchlistBanner(brief: brief),
                       Padding(
                         padding: const EdgeInsets.all(16),
                         child: Text(
@@ -177,6 +179,69 @@ class _MorningBriefScreenState extends ConsumerState<MorningBriefScreen> {
 
   String _formatTime(DateTime dt) {
     return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _AiWatchlistBanner extends ConsumerWidget {
+  final dynamic brief;
+  const _AiWatchlistBanner({required this.brief});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final watchlist = ref.watch(watchlistSymbolsProvider);
+    final notifier = ref.read(watchlistSymbolsProvider.notifier);
+
+    // Collect all unique symbols from all sectors
+    final allSymbols = <String>{};
+    for (final sector in brief.sectors) {
+      for (final stock in sector.stocks) {
+        allSymbols.add(stock.symbol as String);
+      }
+    }
+    final newSymbols = allSymbols.where((s) => !watchlist.contains(s)).toList();
+
+    if (allSymbols.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+        ),
+        child: Row(children: [
+          const Icon(Icons.auto_awesome, size: 16, color: Color(0xFFF59E0B)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              newSymbols.isEmpty
+                  ? 'Đã theo dõi tất cả ${allSymbols.length} mã AI gợi ý ✓'
+                  : 'AI gợi ý ${allSymbols.length} mã hôm nay',
+              style: const TextStyle(fontSize: 13, color: Color(0xFFF59E0B)),
+            ),
+          ),
+          if (newSymbols.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                for (final s in newSymbols) { notifier.add(s); }
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('Đã thêm ${newSymbols.length} mã vào Watchlist ⭐'),
+                  duration: const Duration(seconds: 2),
+                ));
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFF59E0B),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text('Thêm tất cả (${newSymbols.length})', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            ),
+        ]),
+      ),
+    );
   }
 }
 
