@@ -14,25 +14,26 @@ class WatchlistScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final groups = ref.watch(watchlistGroupsProvider);
-    final symbols = ref.watch(watchlistSymbolsProvider);
-    final stocks = ref.watch(watchlistStocksProvider);
     final aiGroups = groups.where((g) => g.isAiGenerated).toList();
-    final hasContent = aiGroups.isNotEmpty || symbols.isNotEmpty;
+    final userGroups = groups.where((g) => !g.isAiGenerated).toList();
+    final hasContent = groups.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Watchlist'),
+        title: const Text('Watchlist'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => context.push('/search'),
+            onPressed: () => _showCreateGroupDialog(context, ref),
           ),
         ],
       ),
       body: !hasContent
-          ? _EmptyState()
+          ? _EmptyState(onAdd: () => _showCreateGroupDialog(context, ref))
           : RefreshIndicator(
-              onRefresh: () async => ref.invalidate(watchlistStocksProvider),
+              onRefresh: () async {
+                ref.invalidate(watchlistGroupsProvider);
+              },
               child: CustomScrollView(
                 slivers: [
                   // ── AI Watchlist Groups ──
@@ -40,73 +41,88 @@ class WatchlistScreen extends ConsumerWidget {
                     SliverToBoxAdapter(
                       child: _SectionHeader(
                         icon: Icons.auto_awesome,
-                        title: 'Watchlist AI',
+                        title: 'Watchlist AI (${aiGroups.length})',
                         color: const Color(0xFFF59E0B),
                       ),
                     ),
                     SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, i) => _AiGroupCard(group: aiGroups[i]),
+                        (context, i) => _GroupCard(group: aiGroups[i]),
                         childCount: aiGroups.length,
                       ),
                     ),
                     const SliverToBoxAdapter(child: SizedBox(height: 8)),
                   ],
 
-                  // ── Manual Watchlist ──
-                  if (symbols.isNotEmpty) ...[
+                  // ── User Watchlist Groups ──
+                  if (userGroups.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: _SectionHeader(
-                        icon: Icons.star_outline,
-                        title: 'Theo dõi thủ công (${symbols.length})',
+                        icon: Icons.person_outline,
+                        title: 'Watchlist được tạo bởi bạn (${userGroups.length})',
                         color: const Color(0xFF94A3B8),
                       ),
                     ),
-                    stocks.when(
-                      data: (list) => SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final s = list[index];
-                            return Dismissible(
-                              key: Key(s.symbol),
-                              direction: DismissDirection.endToStart,
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 20),
-                                color: Colors.red,
-                                child: const Icon(Icons.delete, color: Colors.white),
-                              ),
-                              onDismissed: (_) {
-                                ref.read(watchlistSymbolsProvider.notifier).remove(s.symbol);
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text('Đã xóa ${s.symbol}'),
-                                  action: SnackBarAction(
-                                    label: 'Hoàn tác',
-                                    onPressed: () => ref.read(watchlistSymbolsProvider.notifier).add(s.symbol),
-                                  ),
-                                ));
-                              },
-                              child: StockListTile(
-                                symbol: s.symbol, price: s.price, change: s.change,
-                                changePercent: s.changePercent, volume: s.volume,
-                                ceiling: s.ceiling, floor: s.floor, refPrice: s.refPrice,
-                                onTap: () => context.push('/stock/${s.symbol}'),
-                              ),
-                            );
-                          },
-                          childCount: list.length,
-                        ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, i) => _GroupCard(group: userGroups[i]),
+                        childCount: userGroups.length,
                       ),
-                      loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())),
-                      error: (e, _) => SliverToBoxAdapter(child: Center(child: Text('Lỗi: $e'))),
                     ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
                   ],
                 ],
               ),
             ),
     );
   }
+
+  Future<void> _showCreateGroupDialog(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Tạo Watchlist mới'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Tên watchlist...',
+            border: OutlineInputBorder(),
+          ),
+          textCapitalization: TextCapitalization.sentences,
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Huỷ')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Tạo'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null || name.isEmpty) return;
+
+    final now = DateTime.now();
+    final group = WatchlistGroup(
+      id: 'user_${now.millisecondsSinceEpoch}',
+      name: name,
+      symbols: const [],
+      createdAt: now,
+      isAiGenerated: false,
+    );
+    await ref.read(watchlistGroupsProvider.notifier).addGroup(group);
+
+    // Navigate to search so user can immediately add stocks
+    if (context.mounted) {
+      context.push('/search', extra: group.id);
+    }
+  }
 }
+
+// ── Section Header ──────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   final IconData icon;
@@ -121,23 +137,32 @@ class _SectionHeader extends StatelessWidget {
       child: Row(children: [
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 6),
-        Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+        Text(title, style: TextStyle(
+            fontSize: 12, fontWeight: FontWeight.w600,
             color: color, letterSpacing: 0.5)),
       ]),
     );
   }
 }
 
-class _AiGroupCard extends ConsumerStatefulWidget {
+// ── Group Card (AI + User) ──────────────────────────────────────────────────
+
+class _GroupCard extends ConsumerStatefulWidget {
   final WatchlistGroup group;
-  const _AiGroupCard({required this.group});
+  const _GroupCard({required this.group});
 
   @override
-  ConsumerState<_AiGroupCard> createState() => _AiGroupCardState();
+  ConsumerState<_GroupCard> createState() => _GroupCardState();
 }
 
-class _AiGroupCardState extends ConsumerState<_AiGroupCard> {
+class _GroupCardState extends ConsumerState<_GroupCard> {
   bool _expanded = true;
+
+  Color get _accentColor =>
+      widget.group.isAiGenerated ? const Color(0xFFF59E0B) : const Color(0xFF3B82F6);
+
+  IconData get _headerIcon =>
+      widget.group.isAiGenerated ? Icons.auto_awesome : Icons.star_outline;
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +175,7 @@ class _AiGroupCardState extends ConsumerState<_AiGroupCard> {
       decoration: BoxDecoration(
         color: cs.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+        border: Border.all(color: _accentColor.withValues(alpha: 0.4)),
       ),
       child: Column(children: [
         // Header
@@ -160,18 +185,33 @@ class _AiGroupCardState extends ConsumerState<_AiGroupCard> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
             child: Row(children: [
-              const Icon(Icons.auto_awesome, size: 14, color: Color(0xFFF59E0B)),
+              Icon(_headerIcon, size: 14, color: _accentColor),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(group.name, style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                  Text('${group.symbols.length} mã · ${group.briefDate ?? ""}',
-                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                  Text(
+                    group.symbols.isEmpty
+                        ? 'Chưa có mã nào'
+                        : '${group.symbols.length} mã${group.briefDate != null ? " · ${group.briefDate}" : ""}',
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
                 ]),
               ),
+              // Add stocks button (user groups only)
+              if (!group.isAiGenerated)
+                IconButton(
+                  icon: Icon(Icons.add, size: 18, color: _accentColor),
+                  onPressed: () => context.push('/search', extra: group.id),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: 'Thêm mã',
+                ),
+              const SizedBox(width: 8),
+              // Delete group
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 18),
-                onPressed: () => ref.read(watchlistGroupsProvider.notifier).removeGroup(group.id),
+                onPressed: () => _confirmDelete(context),
                 color: cs.onSurfaceVariant,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -182,124 +222,117 @@ class _AiGroupCardState extends ConsumerState<_AiGroupCard> {
             ]),
           ),
         ),
-        // Stocks linear list
+
+        // Stocks list
         if (_expanded) ...[
           const Divider(height: 1),
-          ref.watch(groupStocksProvider(group.id)).when(
-            data: (stocks) {
-              if (stocks.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Wrap(
-                    spacing: 8, runSpacing: 8,
-                    children: group.symbols.map((s) => _GroupSymbolChip(symbol: s, groupId: group.id)).toList(),
-                  ),
+          if (group.symbols.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(children: [
+                Icon(Icons.add_circle_outline, size: 28, color: _accentColor.withValues(alpha: 0.5)),
+                const SizedBox(height: 8),
+                Text('Nhấn + để thêm mã cổ phiếu',
+                    style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+              ]),
+            )
+          else
+            ref.watch(groupStocksProvider(group.id)).when(
+              data: (stocks) {
+                final stockMap = {for (final s in stocks) s.symbol: s};
+                return Column(
+                  children: group.symbols.map((symbol) {
+                    final s = stockMap[symbol];
+                    if (s == null) return const SizedBox.shrink();
+                    final detail = ref.watch(stockDetailProvider(symbol)).valueOrNull;
+                    return Dismissible(
+                      key: Key('group_${group.id}_$symbol'),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        color: Colors.red,
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      onDismissed: (_) => ref
+                          .read(watchlistGroupsProvider.notifier)
+                          .removeSymbolFromGroup(group.id, symbol),
+                      child: StockListTile(
+                        symbol: s.symbol,
+                        price: s.price,
+                        change: s.change,
+                        changePercent: s.changePercent,
+                        volume: s.volume,
+                        ceiling: s.ceiling,
+                        floor: s.floor,
+                        refPrice: s.refPrice,
+                        companyName: detail?.companyName,
+                        onTap: () => context.push('/stock/$symbol'),
+                      ),
+                    );
+                  }).toList(),
                 );
-              }
-              final stockMap = {for (final s in stocks) s.symbol: s};
-              return Column(
-                children: group.symbols.map((symbol) {
-                  final s = stockMap[symbol];
-                  if (s == null) return const SizedBox.shrink();
-                  final detail = ref.watch(stockDetailProvider(symbol)).valueOrNull;
-                  return Dismissible(
-                    key: Key('group_${group.id}_$symbol'),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.only(right: 20),
-                      color: Colors.red,
-                      child: const Icon(Icons.delete, color: Colors.white),
-                    ),
-                    onDismissed: (_) => ref.read(watchlistGroupsProvider.notifier)
-                        .removeSymbolFromGroup(group.id, symbol),
-                    child: StockListTile(
-                      symbol: s.symbol,
-                      price: s.price,
-                      change: s.change,
-                      changePercent: s.changePercent,
-                      volume: s.volume,
-                      ceiling: s.ceiling,
-                      floor: s.floor,
-                      refPrice: s.refPrice,
-                      companyName: detail?.companyName,
-                      onTap: () => context.push('/stock/$symbol'),
-                    ),
-                  );
-                }).toList(),
-              );
-            },
-            loading: () => const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
-            error: (_, __) => Padding(
-              padding: const EdgeInsets.all(12),
-              child: Wrap(
-                spacing: 8, runSpacing: 8,
-                children: group.symbols.map((s) => _GroupSymbolChip(symbol: s, groupId: group.id)).toList(),
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              ),
+              error: (_, __) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                child: Text('Không tải được dữ liệu',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
               ),
             ),
-          ),
         ],
       ]),
     );
   }
-}
 
-class _GroupSymbolChip extends ConsumerWidget {
-  final String symbol;
-  final String groupId;
-  const _GroupSymbolChip({required this.symbol, required this.groupId});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: () => context.push('/stock/$symbol'),
-      onLongPress: () => showModalBottomSheet(
-        context: context,
-        builder: (_) => SafeArea(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            ListTile(
-              leading: const Icon(Icons.candlestick_chart_outlined),
-              title: Text('Xem $symbol'),
-              onTap: () { Navigator.pop(context); context.push('/stock/$symbol'); },
-            ),
-            ListTile(
-              leading: const Icon(Icons.remove_circle_outline, color: Colors.red),
-              title: const Text('Xóa khỏi nhóm này'),
-              onTap: () {
-                Navigator.pop(context);
-                ref.read(watchlistGroupsProvider.notifier).removeSymbolFromGroup(groupId, symbol);
-              },
-            ),
-          ]),
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: cs.outlineVariant),
-        ),
-        child: Text(symbol, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xoá watchlist?'),
+        content: Text('Xoá "${widget.group.name}" sẽ không thể hoàn tác.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Huỷ')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Xoá'),
+          ),
+        ],
       ),
     );
+    if (confirmed == true) {
+      ref.read(watchlistGroupsProvider.notifier).removeGroup(widget.group.id);
+    }
   }
 }
 
+// ── Empty State ─────────────────────────────────────────────────────────────
+
 class _EmptyState extends StatelessWidget {
+  final VoidCallback onAdd;
+  const _EmptyState({required this.onAdd});
+
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.star_outline, size: 64, color: Colors.grey),
-        SizedBox(height: 16),
-        Text('Chưa có watchlist nào', style: TextStyle(fontSize: 16, color: Colors.grey)),
-        SizedBox(height: 8),
-        Text('Bản tin AI sáng sẽ tự tạo watchlist theo ngành', style: TextStyle(fontSize: 13, color: Colors.grey)),
+        const Icon(Icons.star_outline, size: 64, color: Colors.grey),
+        const SizedBox(height: 16),
+        const Text('Chưa có watchlist nào',
+            style: TextStyle(fontSize: 16, color: Colors.grey)),
+        const SizedBox(height: 8),
+        const Text('AI sẽ tự tạo nhóm từ bản tin sáng',
+            style: TextStyle(fontSize: 13, color: Colors.grey)),
+        const SizedBox(height: 20),
+        FilledButton.icon(
+          onPressed: onAdd,
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Tạo watchlist'),
+        ),
       ]),
     );
   }

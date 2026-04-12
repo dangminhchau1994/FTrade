@@ -42,7 +42,9 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/search',
       parentNavigatorKey: _rootNavigatorKey,
-      builder: (context, state) => const SearchScreen(),
+      builder: (context, state) => SearchScreen(
+        groupId: state.extra as String?,
+      ),
     ),
     GoRoute(
       path: '/paywall',
