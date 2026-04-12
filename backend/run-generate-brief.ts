@@ -1,8 +1,8 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { db, messaging } from "./lib/firebase-admin.js";
-import { generateBriefWithAI } from "./lib/ai-client.js";
-import { fetchMarketNews } from "./lib/news-fetcher.js";
-import type { MorningBrief } from "./lib/types.js";
+import { db, messaging } from "./lib/firebase-admin";
+import { generateBriefWithAI } from "./lib/ai-client";
+import { fetchMarketNews } from "./lib/news-fetcher";
+import type { MorningBrief } from "./lib/types";
 
 function todayVN(): string {
   const vn = new Date(Date.now() + 7 * 60 * 60 * 1000);
