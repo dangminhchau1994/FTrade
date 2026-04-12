@@ -18,6 +18,44 @@ async function getSystemPrompt(): Promise<string | undefined> {
   }
 }
 
+async function sendBriefNotification(summary: string): Promise<void> {
+  try {
+    const snapshot = await db.collection("users")
+      .where("fcmToken", "!=", null)
+      .select("fcmToken")
+      .get();
+
+    const tokens = snapshot.docs
+      .map((d) => d.data().fcmToken as string)
+      .filter(Boolean);
+
+    if (tokens.length === 0) {
+      console.log("No FCM tokens to notify.");
+      return;
+    }
+
+    // FCM multicast: max 500 tokens per batch
+    const chunks: string[][] = [];
+    for (let i = 0; i < tokens.length; i += 500) chunks.push(tokens.slice(i, i + 500));
+
+    let sent = 0;
+    for (const chunk of chunks) {
+      const res = await messaging.sendEachForMulticast({
+        tokens: chunk,
+        notification: { title: "Bản tin sáng đã sẵn sàng ☀️", body: summary },
+        data: { route: "/brief" },
+        apns: { payload: { aps: { sound: "default" } } },
+        android: { priority: "high" },
+      });
+      sent += res.successCount;
+      console.log(`FCM batch: ${res.successCount}/${chunk.length} sent`);
+    }
+    console.log(`✅ Notified ${sent}/${tokens.length} users.`);
+  } catch (err) {
+    console.warn("FCM broadcast failed (non-fatal):", err instanceof Error ? err.message : err);
+  }
+}
+
 async function main() {
   const date = todayVN();
   const briefRef = db.collection("morning_briefs").doc(date);
@@ -62,6 +100,7 @@ async function main() {
         briefDate: date,
       });
 
+      await sendBriefNotification(brief.summary[0] ?? "Bản tin sáng đã sẵn sàng");
       console.log(`✅ Brief ${date} generated. Cost: $${costUsd.toFixed(4)}`);
       process.exit(0);
     } catch (err) {
