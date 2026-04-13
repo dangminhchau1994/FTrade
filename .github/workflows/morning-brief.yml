@@ -22,7 +22,7 @@ jobs:
         working-directory: backend
 
       - name: Generate Morning Brief
-        run: npx ts-node run-generate-brief.ts
+        run: npx tsx run-generate-brief.ts
         working-directory: backend
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -30,8 +30,7 @@ jobs:
           DRY_RUN: 'false'
 
       - name: Evaluate Accuracy (weekdays only)
-        if: ${{ !contains(fromJson('["Saturday","Sunday"]'), steps.day.outputs.day) }}
-        run: npx ts-node run-evaluate-accuracy.ts
+        run: npx tsx run-evaluate-accuracy.ts
         working-directory: backend
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
