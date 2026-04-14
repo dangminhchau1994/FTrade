@@ -15,6 +15,7 @@ import 'core/widgets/connectivity_banner.dart';
 import 'features/auth/data/repositories/user_repository.dart';
 import 'features/market/presentation/providers/market_data_controller.dart';
 import 'features/settings/presentation/providers/theme_provider.dart';
+import 'features/watchlist/data/services/contextual_alert_monitor.dart';
 import 'features/watchlist/data/services/price_alert_monitor.dart';
 import 'firebase_options.dart';
 
@@ -71,6 +72,7 @@ class _FTradeAppState extends ConsumerState<FTradeApp> with WidgetsBindingObserv
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(marketDataControllerProvider.notifier).connect();
       ref.read(priceAlertMonitorProvider);
+      ref.read(contextualAlertMonitorProvider);
     });
   }
 
@@ -85,6 +87,7 @@ class _FTradeAppState extends ConsumerState<FTradeApp> with WidgetsBindingObserv
     final controller = ref.read(marketDataControllerProvider.notifier);
     if (state == AppLifecycleState.resumed) {
       controller.connect();
+      ref.read(contextualAlertMonitorProvider).check();
     } else if (state == AppLifecycleState.paused) {
       controller.disconnect();
     }

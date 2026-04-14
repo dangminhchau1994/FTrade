@@ -46,9 +46,36 @@ class NotificationService {
     );
 
     await _plugin.show(
-      symbol.hashCode ^ targetPrice.hashCode, // unique id per alert
+      symbol.hashCode ^ targetPrice.hashCode,
       'Cảnh báo giá $symbol',
       '$symbol đã $direction $priceStr',
+      const NotificationDetails(android: androidDetails, iOS: iosDetails),
+    );
+  }
+
+  static Future<void> showContextualAlert({
+    required String id,
+    required String title,
+    required String body,
+  }) async {
+    const androidDetails = AndroidNotificationDetails(
+      'contextual_alerts',
+      'Sự kiện doanh nghiệp',
+      channelDescription: 'Thông báo chốt quyền, cổ tức, ĐHCĐ',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+    );
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    await _plugin.show(
+      id.hashCode,
+      title,
+      body,
       const NotificationDetails(android: androidDetails, iOS: iosDetails),
     );
   }
