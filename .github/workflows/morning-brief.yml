@@ -34,3 +34,9 @@ jobs:
         working-directory: backend
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Check Corporate Events & Send Alerts
+        run: npx tsx run-check-events.ts
+        working-directory: backend
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

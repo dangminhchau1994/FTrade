@@ -47,6 +47,13 @@ class UserRepository {
     await _db.collection('users').doc(uid).update({'fcmToken': token});
   }
 
+  Future<void> updateWatchlistSymbols(String uid, List<String> symbols) async {
+    await _db.collection('users').doc(uid).update({
+      'watchlistSymbols': symbols,
+      'watchlistUpdatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Stream<AppUser?> watchUser(String uid) {
     return _db.collection('users').doc(uid).snapshots().map((doc) {
       if (!doc.exists) return null;
