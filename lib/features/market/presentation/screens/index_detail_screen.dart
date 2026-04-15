@@ -1,15 +1,13 @@
-import 'dart:math';
-
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/format_utils.dart';
+import '../../domain/entities/chart_point.dart' as app;
 import '../../../../core/widgets/market_breadth_bar.dart';
 import '../../../../core/widgets/stock_list_tile.dart';
-import '../../domain/entities/chart_point.dart';
 import '../../domain/entities/stock.dart';
 import '../providers/market_data_controller.dart';
 import '../providers/market_providers.dart';
@@ -275,7 +273,7 @@ class _IndexChartState extends ConsumerState<_IndexChart> {
     );
   }
 
-  Widget _buildChart(List<ChartPoint> data) {
+  Widget _buildChart(List<app.ChartPoint> data) {
     if (data.isEmpty) {
       return Center(
         child: Text(
@@ -285,100 +283,82 @@ class _IndexChartState extends ConsumerState<_IndexChart> {
       );
     }
 
+    final cs = Theme.of(context).colorScheme;
     final isUp = data.last.close >= data.first.close;
     final color = isUp ? AppTheme.gainColor : AppTheme.lossColor;
-    final minY = data.map((p) => p.low).reduce(min);
-    final maxY = data.map((p) => p.high).reduce(max);
-    final padding = (maxY - minY) * 0.1;
 
-    final spots = data
-        .asMap()
-        .entries
-        .map((e) => FlSpot(e.key.toDouble(), e.value.close))
-        .toList();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: (maxY - minY) / 4,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: Colors.grey.withValues(alpha: 0.15),
-              strokeWidth: 1,
-            ),
-          ),
-          titlesData: FlTitlesData(
-            topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            leftTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            bottomTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 60,
-                getTitlesWidget: (value, meta) {
-                  if (value == meta.min || value == meta.max) {
-                    return const SizedBox.shrink();
-                  }
-                  return Text(
-                    FormatUtils.indexValue(value),
-                    style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-                  );
-                },
-              ),
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          minY: minY - padding,
-          maxY: maxY + padding,
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipItems: (spots) => spots
-                  .map(
-                    (s) => LineTooltipItem(
-                      FormatUtils.indexValue(s.y),
-                      TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-          lineBarsData: [
-            LineChartBarData(
-              spots: spots,
-              isCurved: true,
-              preventCurveOverShooting: true,
-              color: color,
-              barWidth: 2,
-              isStrokeCapRound: true,
-              dotData: const FlDotData(show: false),
-              belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    color.withValues(alpha: 0.25),
-                    color.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ],
+    return SfCartesianChart(
+      margin: const EdgeInsets.only(right: 4, left: 4),
+      plotAreaBorderWidth: 0,
+      backgroundColor: Colors.transparent,
+      crosshairBehavior: CrosshairBehavior(
+        enable: true,
+        activationMode: ActivationMode.longPress,
+        lineType: CrosshairLineType.vertical,
+        lineWidth: 1,
+        lineColor: cs.onSurfaceVariant.withValues(alpha: 0.4),
+        shouldAlwaysShow: false,
+      ),
+      zoomPanBehavior: ZoomPanBehavior(
+        enablePanning: true,
+        enablePinching: true,
+        zoomMode: ZoomMode.x,
+      ),
+      primaryXAxis: const DateTimeAxis(
+        isVisible: false,
+        majorGridLines: MajorGridLines(width: 0),
+      ),
+      primaryYAxis: NumericAxis(
+        opposedPosition: true,
+        axisLine: const AxisLine(width: 0),
+        majorTickLines: const MajorTickLines(size: 0),
+        labelStyle:
+            TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+        majorGridLines: MajorGridLines(
+          width: 0.5,
+          color: cs.outlineVariant.withValues(alpha: 0.4),
+          dashArray: const <double>[4, 4],
+        ),
+        axisLabelFormatter: (AxisLabelRenderDetails details) =>
+            ChartAxisLabel(
+          FormatUtils.indexValue(details.value.toDouble()),
+          details.textStyle,
         ),
       ),
+      tooltipBehavior: TooltipBehavior(
+        enable: true,
+        builder: (rawData, point, series, pointIndex, seriesIndex) {
+          final p = rawData as app.ChartPoint;
+          return Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              FormatUtils.indexValue(p.close),
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          );
+        },
+      ),
+      series: <CartesianSeries<app.ChartPoint, DateTime>>[
+        SplineAreaSeries<app.ChartPoint, DateTime>(
+          dataSource: data,
+          xValueMapper: (p, _) => p.date,
+          yValueMapper: (p, _) => p.close,
+          color: color.withValues(alpha: 0.12),
+          borderColor: color,
+          borderWidth: 2,
+          splineType: SplineType.monotonic,
+          animationDuration: 600,
+        ),
+      ],
     );
   }
 }

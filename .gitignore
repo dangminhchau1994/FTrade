@@ -28,3 +28,4 @@ dist/
 # Claude
 .claude/
 tmp_vnstock_pkg/
+backend/.env.production

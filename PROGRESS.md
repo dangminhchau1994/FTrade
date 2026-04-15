@@ -286,5 +286,20 @@
 - [x] Fix CI: `ts-node` → `tsx` (esbuild-based) cho Node 22 compatibility
 - [x] Fix `rows.map is not a function`: thêm `Array.isArray()` guards trong vietstock-client.ts
 
+### 2026-04-15 - Epic 7: Technical Analysis ✅ DONE + Syncfusion chart migration
+- [x] Migrate `fl_chart` → `syncfusion_flutter_charts 31.1.19` (Flutter 3.29.2 compatible)
+- [x] `stock_chart.dart` rewrite:
+  - **Candlestick chart** (CandleSeries, bullColor/bearColor, solid candles) — replaces ugly line chart
+  - **MA overlays**: SmaIndicator (MA5/10/20/50), color chips
+  - **Bollinger Bands** (BollingerBandIndicator, period=20, 2σ, teal) — new Epic 7 indicator
+  - **RSI panel** (RsiIndicator, 14-period, invisible CandleSeries as data source, overbought/oversold plotBands)
+  - **MACD panel** (MacdIndicator, 12/26/9, histogram + signal + MACD lines)
+  - **Zoom/pan** (ZoomPanBehavior, X-axis, pinch + drag)
+  - **Crosshair** (long press, both axes)
+  - **Volume bars** (ColumnSeries, green/red alpha)
+  - Y-axis: compact "25k" labels
+- [x] `flow_bar_chart.dart` rewrite: SfCartesianChart + ColumnSeries (cleaner, proper tooltip)
+- [x] `index_detail_screen.dart` chart rewrite: SplineAreaSeries + gradient + crosshair + zoom
+
 ## Phase 4: Giao dịch (chưa bắt đầu)
 - [ ] Tích hợp VNDirect API, vào lệnh tự động
