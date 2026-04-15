@@ -13,6 +13,7 @@ import '../../features/watchlist/presentation/screens/watchlist_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/corporate/presentation/screens/corporate_screen.dart';
 import '../../features/money_flow/presentation/screens/money_flow_screen.dart';
+import '../../features/fundamental/presentation/screens/fa_dashboard_screen.dart';
 import '../../features/fundamental/presentation/screens/financial_statement_screen.dart';
 import '../../features/fundamental/presentation/screens/industry_comparison_screen.dart';
 import '../../features/premium/presentation/screens/paywall_screen.dart';
@@ -84,6 +85,13 @@ final appRouter = GoRouter(
       path: '/comparison/:symbol',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => IndustryComparisonScreen(
+        symbol: state.pathParameters['symbol']!,
+      ),
+    ),
+    GoRoute(
+      path: '/fa/:symbol',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => FaDashboardScreen(
         symbol: state.pathParameters['symbol']!,
       ),
     ),

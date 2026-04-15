@@ -268,6 +268,16 @@
 - [x] Fix `TextEditingController disposed too early` crash in create-watchlist dialog
   - Moved controller into `_CreateGroupDialog` StatefulWidget (proper lifecycle)
 
+### 2026-04-15 - FA Dashboard ✅ DONE
+- [x] `FaAnalysis` entity (Freezed): PiotroskiScore, AltmanZScore, DuPontAnalysis, GrowthMetrics, ValuationResult, RiskMetrics
+- [x] `FaCalculator` — pure static logic, isolate-safe: Piotroski F-Score, Altman Z'' EM, DuPont, Growth YoY/QoQ, Valuation (Graham, PEG, DCF, EV/EBITDA, FCF Yield), Risk (Volatility, Beta, MaxDD, Sharpe)
+- [x] `FaAnalysisDatasource` — parallel fetch IS+BS+CF+price history, compute() isolate, 6h cache
+- [x] `faAnalysisProvider` (FutureProvider.family by params record)
+- [x] `FaDashboardScreen` — Piotroski card, Altman Z'' card, Valuation card, DuPont table, Growth table, Risk card
+- [x] Route `/fa/:symbol` added to AppRouter
+- [x] StockDetailScreen: thêm button "FA" (icon analytics) cạnh "BCTC" và "So sánh"
+- [x] Fix compile: `_tableHeader`/`_tableCell` → `_TH`/`_TD` (undefined symbol trong table widgets)
+
 ### 2026-04-15 - UI/UX & Bug Fixes
 - [x] Bỏ tab "Thị trường" khỏi bottom nav (nay 5 tabs), market là full-screen push route
 - [x] HomeScreen "Xem tất cả" dùng `context.push('/market')` thay `context.go`

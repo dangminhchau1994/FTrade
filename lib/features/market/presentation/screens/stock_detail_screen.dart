@@ -273,13 +273,21 @@ class StockDetailScreen extends ConsumerWidget {
                                 context.push('/financials/$symbol'),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: OutlinedButton.icon(
                             icon: const Icon(Icons.compare_arrows, size: 18),
-                            label: const Text('So sánh ngành'),
+                            label: const Text('So sánh'),
                             onPressed: () =>
                                 context.push('/comparison/$symbol'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.analytics, size: 18),
+                            label: const Text('FA'),
+                            onPressed: () => context.push('/fa/$symbol'),
                           ),
                         ),
                       ],
