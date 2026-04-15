@@ -125,6 +125,7 @@ class _MqttStatusTileState extends ConsumerState<_MqttStatusTile> {
   Timer? _refreshTimer;
   int _msgCount = 0;
   DateTime? _lastMsg;
+  String? _lastError;
 
   @override
   void initState() {
@@ -136,6 +137,7 @@ class _MqttStatusTileState extends ConsumerState<_MqttStatusTile> {
         setState(() {
           _msgCount = ds.mqttMessageCount;
           _lastMsg = ds.mqttLastMessage;
+          _lastError = ds.mqttLastError;
         });
       }
     });
@@ -164,12 +166,31 @@ class _MqttStatusTileState extends ConsumerState<_MqttStatusTile> {
         ? 'chưa nhận message'
         : 'last: ${_lastMsg!.hour.toString().padLeft(2,'0')}:${_lastMsg!.minute.toString().padLeft(2,'0')}:${_lastMsg!.second.toString().padLeft(2,'0')}';
 
+    // Truncate error to 60 chars so it fits in the tile
+    final errSnippet = _lastError != null
+        ? _lastError!.length > 60
+            ? _lastError!.substring(0, 60)
+            : _lastError!
+        : null;
+
     return ListTile(
       leading: Icon(icon, color: color),
       title: const Text('MQTT Realtime'),
-      subtitle: Text(
-        '$label · $_msgCount msgs · $lastTime',
-        style: TextStyle(color: color, fontSize: 12),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label · $_msgCount msgs · $lastTime',
+            style: TextStyle(color: color, fontSize: 12),
+          ),
+          if (errSnippet != null)
+            Text(
+              errSnippet,
+              style: TextStyle(color: Colors.red[300], fontSize: 11),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+        ],
       ),
       trailing: IconButton(
         icon: const Icon(Icons.refresh, size: 20),

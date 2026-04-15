@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -19,7 +21,26 @@ import 'features/watchlist/data/services/contextual_alert_monitor.dart';
 import 'features/watchlist/data/services/price_alert_monitor.dart';
 import 'firebase_options.dart';
 
+/// Force http/1.1 ALPN on ALL HttpClient() creations (including mqtt_client's
+/// MqttServerWsConnection). Without this, Dart advertises h2 via ALPN;
+/// price-streaming.ssi.com.vn negotiates h2, then rejects the WebSocket
+/// Upgrade request (HTTP 426). Forcing http/1.1 causes the server to keep
+/// using HTTP/1.1, and the WebSocket Upgrade succeeds (101 Switching Protocols).
+class _Http11Overrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    final secCtx = SecurityContext(withTrustedRoots: true);
+    try {
+      secCtx.setAlpnProtocols(['http/1.1'], false);
+    } catch (_) {}
+    return super.createHttpClient(secCtx)
+      // Keep bad-cert bypass so SSI cert changes don't break the app
+      ..badCertificateCallback = (_, __, ___) => true;
+  }
+}
+
 void main() async {
+  HttpOverrides.global = _Http11Overrides();
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 

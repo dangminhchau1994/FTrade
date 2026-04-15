@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -39,6 +38,7 @@ class MqttService {
 
   int _messageCount = 0;
   DateTime? _lastMessageAt;
+  String? _lastError;
 
   MqttConnectionStatus get status => _status;
   Stream<MqttConnectionStatus> get statusStream => _statusController.stream;
@@ -47,6 +47,7 @@ class MqttService {
   bool get isConnected => _status == MqttConnectionStatus.connected;
   int get messageCount => _messageCount;
   DateTime? get lastMessageAt => _lastMessageAt;
+  String? get lastError => _lastError;
 
   MqttService({
     required this.url,
@@ -73,25 +74,16 @@ class MqttService {
       uri.port > 0 ? uri.port : port,
     );
 
-    // Force HTTP/1.1 via ALPN:
-    // price-streaming.ssi.com.vn negotiates h2 in TLS handshake.
-    // Standard WebSocket (dart:io WebSocket.connect) sends HTTP/1.1 Upgrade
-    // headers, which are INVALID over h2 streams → connection fails silently.
-    // Fix: useAlternateWebSocketImplementation uses SecureSocket + manual
-    // HTTP/1.1 WebSocket handshake (bypasses h2 entirely).
-    // Also set SecurityContext ALPN to ['http/1.1'] so the TLS layer itself
-    // doesn't advertise h2, ensuring the server doesn't try to use it.
-    final secCtx = SecurityContext(withTrustedRoots: true);
-    try {
-      secCtx.setAlpnProtocols(['http/1.1'], false);
-    } catch (_) {
-      // Ignore on platforms that don't support setAlpnProtocols
-    }
-
+    // http/1.1 ALPN is forced globally via HttpOverrides in main.dart.
+    // MqttServerWsConnection creates HttpClient() internally — the override
+    // intercepts that call and injects a SecurityContext with ALPN=['http/1.1'],
+    // ensuring the TLS handshake stays on HTTP/1.1 (SSI broker drops to h2
+    // otherwise, which rejects the WebSocket Upgrade with 426).
+    // We use standard WS (not WS2) to avoid mqtt_client's strict handshake
+    // header validation which can silently fail.
     _client!
       ..useWebSocket = true
-      ..useAlternateWebSocketImplementation = true
-      ..securityContext = secCtx
+      ..useAlternateWebSocketImplementation = false
       ..websocketProtocols = MqttClientConstants.protocolsSingleDefault
       ..keepAlivePeriod = keepAliveSeconds
       ..connectTimeoutPeriod = 10000
@@ -100,7 +92,7 @@ class MqttService {
       ..onConnected = _onConnected
       ..logging(on: false);
 
-    // Keep bad-cert bypass as safety net in case SSI cert changes
+    // Bad-cert bypass: safety net in case SSI cert changes or self-signs
     _client!.onBadCertificate = (Object _) => true;
 
     _client!.connectionMessage = MqttConnectMessage()
@@ -109,7 +101,9 @@ class MqttService {
         .withWillQos(MqttQos.atMostOnce);
 
     try {
-      await _client!.connect(username, password);
+      await _client!
+          .connect(username, password)
+          .timeout(const Duration(seconds: 20));
 
       // Verify connection succeeded
       final connStatus = _client!.connectionStatus;
@@ -119,6 +113,7 @@ class MqttService {
         );
       }
     } catch (e) {
+      _lastError = e.toString();
       _logger.e('MQTT connect error: $e');
       _client?.disconnect();
       _client = null;

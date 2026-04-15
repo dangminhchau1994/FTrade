@@ -32,6 +32,7 @@ class MarketRealtimeDatasource {
       _mqtt?.status ?? MqttConnectionStatus.disconnected;
   int get mqttMessageCount => _mqtt?.messageCount ?? 0;
   DateTime? get mqttLastMessage => _mqtt?.lastMessageAt;
+  String? get mqttLastError => _mqtt?.lastError;
 
   Stream<RealtimeMarketData> stockStream(String symbol) =>
       _dataController.stream.where((d) => d.symbol == symbol.toUpperCase());
