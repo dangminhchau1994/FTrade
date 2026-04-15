@@ -140,6 +140,15 @@
 - [ ] CÒN LẠI: Thêm Referer header cho `ChartApiDatasource.getIndexChartData()` (cũng dùng SSI iboard, có thể bị 403)
 - [ ] CÒN LẠI: Test thực tế trên device
 
+### 2026-04-15 - Realtime fixes (session 2)
+- [x] Index poll interval: 15s → 5s (cập nhật nhanh hơn 3x)
+- [x] MQTT reconnect: bỏ giới hạn 10 lần, retry vô hạn với backoff 30s max
+- [x] MQTT message counter: Settings → Developer hiển thị số msgs + timestamp cuối
+- [x] Watchlist: fix black background + TextEditingController dispose crash
+- [x] MQTT logging: bật tạm để debug, tắt lại sau
+
+---
+
 ## Phase 3: Nhận định thông minh (đang làm)
 
 ### 2026-04-02 - UX Design Specification hoàn thành
@@ -242,6 +251,22 @@
 - [x] `backend/lib/vietstock-client.ts` — TypeScript port: CSRF+cookie auth, `fetchUpcomingEvents(daysAhead)`
 - [x] GitHub Actions: thêm step "Check Corporate Events & Send Alerts" vào `morning-brief.yml`
 - [x] `SettingsScreen`: Developer section — test local notification + scan watchlist events manually
+
+### 2026-04-15 - Realtime MQTT Fix (root cause identified)
+- [x] Identified root cause: `price-streaming.ssi.com.vn` negotiates **HTTP/2 via ALPN** in TLS handshake
+  - Dart's `WebSocket.connect()` + `HttpClient` sends h2, server accepts h2
+  - WebSocket Upgrade headers (HTTP/1.1 hop-by-hop) are INVALID over HTTP/2 streams → silent fail
+  - MQTT retried 10 times and gave up → `0.00 / 0.00%` shown forever
+- [x] Fix: `useAlternateWebSocketImplementation = true` in MqttService
+  - Uses `MqttServerWs2Connection` → `SecureSocket` + manual HTTP/1.1 WebSocket handshake
+  - Bypasses the h2 issue entirely (raw TLS socket, not HttpClient)
+- [x] Fix: `SecurityContext.setAlpnProtocols(['http/1.1'], false)` in secCtx
+  - Forces TLS layer to only advertise http/1.1 in ALPN, so server can't pick h2
+- [x] Enable `mqtt_client` logging temporarily to confirm connection
+- [x] Add MQTT status tile + reconnect button in SettingsScreen → Developer section
+- [x] Fix `WatchlistScreen._EmptyState` dark mode visibility (Colors.grey → cs.onSurface/onSurfaceVariant)
+- [x] Fix `TextEditingController disposed too early` crash in create-watchlist dialog
+  - Moved controller into `_CreateGroupDialog` StatefulWidget (proper lifecycle)
 
 ### 2026-04-15 - UI/UX & Bug Fixes
 - [x] Bỏ tab "Thị trường" khỏi bottom nav (nay 5 tabs), market là full-screen push route

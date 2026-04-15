@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -36,11 +37,16 @@ class MqttService {
 
   MqttConnectionStatus _status = MqttConnectionStatus.disconnected;
 
+  int _messageCount = 0;
+  DateTime? _lastMessageAt;
+
   MqttConnectionStatus get status => _status;
   Stream<MqttConnectionStatus> get statusStream => _statusController.stream;
   Stream<MqttReceivedMessage<MqttMessage>> get messageStream =>
       _messageController.stream;
   bool get isConnected => _status == MqttConnectionStatus.connected;
+  int get messageCount => _messageCount;
+  DateTime? get lastMessageAt => _lastMessageAt;
 
   MqttService({
     required this.url,
@@ -67,11 +73,26 @@ class MqttService {
       uri.port > 0 ? uri.port : port,
     );
 
+    // Force HTTP/1.1 via ALPN:
+    // price-streaming.ssi.com.vn negotiates h2 in TLS handshake.
+    // Standard WebSocket (dart:io WebSocket.connect) sends HTTP/1.1 Upgrade
+    // headers, which are INVALID over h2 streams → connection fails silently.
+    // Fix: useAlternateWebSocketImplementation uses SecureSocket + manual
+    // HTTP/1.1 WebSocket handshake (bypasses h2 entirely).
+    // Also set SecurityContext ALPN to ['http/1.1'] so the TLS layer itself
+    // doesn't advertise h2, ensuring the server doesn't try to use it.
+    final secCtx = SecurityContext(withTrustedRoots: true);
+    try {
+      secCtx.setAlpnProtocols(['http/1.1'], false);
+    } catch (_) {
+      // Ignore on platforms that don't support setAlpnProtocols
+    }
+
     _client!
       ..useWebSocket = true
-      // secure = true là cho TCP thuần, KHÔNG dùng cho WSS
-      // WS connection handler tự xử lý wss:// scheme qua WebSocket.connect()
-      ..websocketProtocols = ['mqtt']
+      ..useAlternateWebSocketImplementation = true
+      ..securityContext = secCtx
+      ..websocketProtocols = MqttClientConstants.protocolsSingleDefault
       ..keepAlivePeriod = keepAliveSeconds
       ..connectTimeoutPeriod = 10000
       ..autoReconnect = false
@@ -79,8 +100,7 @@ class MqttService {
       ..onConnected = _onConnected
       ..logging(on: false);
 
-    // SSI dùng self-signed cert → accept tất cả cert cho WSS connection
-    // mqtt_client 10.8.0+ dùng Object thay vì X509Certificate
+    // Keep bad-cert bypass as safety net in case SSI cert changes
     _client!.onBadCertificate = (Object _) => true;
 
     _client!.connectionMessage = MqttConnectMessage()
@@ -144,6 +164,8 @@ class MqttService {
     _updatesSub?.cancel();
     _updatesSub = _client?.updates?.listen((messages) {
       for (final msg in messages) {
+        _messageCount++;
+        _lastMessageAt = DateTime.now();
         if (!_messageController.isClosed) _messageController.add(msg);
       }
     });
@@ -167,17 +189,20 @@ class MqttService {
 
   void _scheduleReconnect() {
     if (_disposed || !_shouldReconnect) return;
-    if (_reconnectAttempts >= maxReconnectAttempts) {
-      _logger.e('MQTT max reconnect attempts reached');
-      return;
-    }
 
     _reconnectTimer?.cancel();
+
+    // Reset counter after exhausting attempts so we keep retrying indefinitely
+    // with the max backoff (30 s) rather than giving up.
+    if (_reconnectAttempts >= maxReconnectAttempts) {
+      _reconnectAttempts = 0;
+    }
+
     final delay = Duration(seconds: min(3 * (_reconnectAttempts + 1), 30));
     _reconnectAttempts++;
     _logger.i(
       'MQTT reconnecting in ${delay.inSeconds}s '
-      '(attempt $_reconnectAttempts/$maxReconnectAttempts)',
+      '(attempt $_reconnectAttempts)',
     );
     _reconnectTimer = Timer(delay, connect);
   }

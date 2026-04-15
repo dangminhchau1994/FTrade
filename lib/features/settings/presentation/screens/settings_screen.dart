@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/mqtt_service.dart';
 import '../../../../core/services/notification_service.dart';
+import '../../../market/presentation/providers/market_data_controller.dart';
 import '../../../watchlist/data/services/contextual_alert_monitor.dart';
 import '../providers/theme_provider.dart';
 
@@ -59,6 +63,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
           const _SettingsSection(title: 'Developer'),
+          _MqttStatusTile(),
           ListTile(
             leading: const Icon(Icons.notifications_active_outlined),
             title: const Text('Test local notification'),
@@ -106,6 +111,73 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('1.0.0'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MqttStatusTile extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_MqttStatusTile> createState() => _MqttStatusTileState();
+}
+
+class _MqttStatusTileState extends ConsumerState<_MqttStatusTile> {
+  Timer? _refreshTimer;
+  int _msgCount = 0;
+  DateTime? _lastMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    // Poll message count every 2 seconds (count is a simple int, not a stream)
+    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      final ds = ref.read(marketRealtimeDatasourceProvider);
+      if (mounted) {
+        setState(() {
+          _msgCount = ds.mqttMessageCount;
+          _lastMsg = ds.mqttLastMessage;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final statusAsync = ref.watch(marketConnectionStatusProvider);
+    final (label, color, icon) = statusAsync.when(
+      data: (s) => switch (s) {
+        MqttConnectionStatus.connected    => ('Đã kết nối', Colors.green, Icons.wifi),
+        MqttConnectionStatus.connecting   => ('Đang kết nối...', Colors.orange, Icons.wifi_find),
+        MqttConnectionStatus.disconnected => ('Mất kết nối', Colors.red, Icons.wifi_off),
+      },
+      loading: () => ('Chờ...', Colors.grey, Icons.wifi_find),
+      error: (_, __) => ('Lỗi', Colors.red, Icons.error_outline),
+    );
+
+    final lastTime = _lastMsg == null
+        ? 'chưa nhận message'
+        : 'last: ${_lastMsg!.hour.toString().padLeft(2,'0')}:${_lastMsg!.minute.toString().padLeft(2,'0')}:${_lastMsg!.second.toString().padLeft(2,'0')}';
+
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: const Text('MQTT Realtime'),
+      subtitle: Text(
+        '$label · $_msgCount msgs · $lastTime',
+        style: TextStyle(color: color, fontSize: 12),
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.refresh, size: 20),
+        tooltip: 'Reconnect',
+        onPressed: () {
+          ref.read(marketDataControllerProvider.notifier).disconnect()
+              .then((_) => ref.read(marketDataControllerProvider.notifier).connect());
+        },
       ),
     );
   }

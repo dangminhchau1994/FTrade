@@ -78,31 +78,10 @@ class WatchlistScreen extends ConsumerWidget {
   }
 
   Future<void> _showCreateGroupDialog(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Tạo Watchlist mới'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Tên watchlist...',
-            border: OutlineInputBorder(),
-          ),
-          textCapitalization: TextCapitalization.sentences,
-          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Huỷ')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Tạo'),
-          ),
-        ],
-      ),
+      builder: (ctx) => const _CreateGroupDialog(),
     );
-    controller.dispose();
     if (name == null || name.isEmpty) return;
 
     final now = DateTime.now();
@@ -310,6 +289,52 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
   }
 }
 
+// ── Create Group Dialog ─────────────────────────────────────────────────────
+
+class _CreateGroupDialog extends StatefulWidget {
+  const _CreateGroupDialog();
+
+  @override
+  State<_CreateGroupDialog> createState() => _CreateGroupDialogState();
+}
+
+class _CreateGroupDialogState extends State<_CreateGroupDialog> {
+  late final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Tạo Watchlist mới'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(
+          hintText: 'Tên watchlist...',
+          border: OutlineInputBorder(),
+        ),
+        textCapitalization: TextCapitalization.sentences,
+        onSubmitted: (v) => Navigator.pop(context, v.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Huỷ'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: const Text('Tạo'),
+        ),
+      ],
+    );
+  }
+}
+
 // ── Empty State ─────────────────────────────────────────────────────────────
 
 class _EmptyState extends StatelessWidget {
@@ -318,15 +343,16 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        const Icon(Icons.star_outline, size: 64, color: Colors.grey),
+        Icon(Icons.star_outline, size: 64, color: cs.onSurfaceVariant),
         const SizedBox(height: 16),
-        const Text('Chưa có watchlist nào',
-            style: TextStyle(fontSize: 16, color: Colors.grey)),
+        Text('Chưa có watchlist nào',
+            style: TextStyle(fontSize: 16, color: cs.onSurface)),
         const SizedBox(height: 8),
-        const Text('AI sẽ tự tạo nhóm từ bản tin sáng',
-            style: TextStyle(fontSize: 13, color: Colors.grey)),
+        Text('AI sẽ tự tạo nhóm từ bản tin sáng',
+            style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
         const SizedBox(height: 20),
         FilledButton.icon(
           onPressed: onAdd,

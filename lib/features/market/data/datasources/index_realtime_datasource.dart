@@ -31,17 +31,19 @@ class IndexRealtimeDatasource {
     'HNX30': 'HNX30',
   };
 
-  static const _pollInterval = Duration(seconds: 15);
+  static const _pollInterval = Duration(seconds: 5);
 
   final Dio _dio;
   Timer? _pollTimer;
   bool _disposed = false;
+  bool _polling = false; // guard against overlapping polls
 
   final _controller = StreamController<RealtimeIndexData>.broadcast();
   Stream<RealtimeIndexData> get stream => _controller.stream;
 
-  // Cache previous close for computing change
-  final _prevClose = <String, double>{};
+  // Reference price anchored at first fetch of the day (market open)
+  final _refPrice = <String, double>{};
+  DateTime? _refDate;
 
   IndexRealtimeDatasource(this._dio);
 
@@ -50,9 +52,20 @@ class IndexRealtimeDatasource {
 
     _logger.i('IndexRealtime: starting SSI poll (${_pollInterval.inSeconds}s)');
 
-    // Fetch immediately, then start timer
+    // Fetch immediately, then schedule next poll after completion
     await _pollAll();
-    _pollTimer = Timer.periodic(_pollInterval, (_) => _pollAll());
+    _schedulePoll();
+  }
+
+  void _schedulePoll() {
+    if (_disposed || _pollTimer != null) return;
+    _pollTimer = Timer(_pollInterval, () async {
+      _pollTimer = null;
+      if (!_disposed) {
+        await _pollAll();
+        _schedulePoll();
+      }
+    });
   }
 
   Future<void> disconnect() async {
@@ -67,14 +80,34 @@ class IndexRealtimeDatasource {
   }
 
   Future<void> _pollAll() async {
-    if (_disposed) return;
+    if (_disposed || _polling) return;
+    _polling = true;
 
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final from = now - 600; // last 10 minutes
+    try {
+      final now = DateTime.now();
+      final nowSec = now.millisecondsSinceEpoch ~/ 1000;
 
-    await Future.wait(
-      _symbols.map((sym) => _fetchIndex(sym, from, now)),
-    );
+      // Anchor 'from' to market open (9:00 AM Vietnam = UTC+7) for correct
+      // daily change. If before 9 AM, use 1 hour back as fallback.
+      final marketOpen = DateTime(now.year, now.month, now.day, 9, 0, 0);
+      final fromDt = now.isBefore(marketOpen)
+          ? now.subtract(const Duration(hours: 1))
+          : marketOpen;
+      final fromSec = fromDt.millisecondsSinceEpoch ~/ 1000;
+
+      // Reset daily ref prices at start of new trading day
+      final today = DateTime(now.year, now.month, now.day);
+      if (_refDate != today) {
+        _refPrice.clear();
+        _refDate = today;
+      }
+
+      await Future.wait(
+        _symbols.map((sym) => _fetchIndex(sym, fromSec, nowSec)),
+      );
+    } finally {
+      _polling = false;
+    }
   }
 
   Future<void> _fetchIndex(String symbol, int from, int to) async {
@@ -105,22 +138,17 @@ class IndexRealtimeDatasource {
       if (closes == null || closes.isEmpty) return;
 
       final latestClose = (closes.last as num).toDouble();
-      // Compute change from first candle of the day (or previous session close)
+
+      // Use the open of the FIRST candle since market open as daily reference.
+      // Anchored once per day so it doesn't drift as the window rolls forward.
       double prevClose;
-      if (closes.length >= 2) {
-        // Use first candle open as reference (approximate)
+      if (!_refPrice.containsKey(symbol) && closes.isNotEmpty) {
         final opens = data['o'] as List?;
-        prevClose = opens != null && opens.isNotEmpty
+        _refPrice[symbol] = opens != null && opens.isNotEmpty
             ? (opens.first as num).toDouble()
             : (closes.first as num).toDouble();
-      } else {
-        prevClose = _prevClose[symbol] ?? latestClose;
       }
-
-      // Store for next poll
-      if (closes.length >= 2) {
-        _prevClose[symbol] = prevClose;
-      }
+      prevClose = _refPrice[symbol] ?? latestClose;
 
       final change = latestClose - prevClose;
       final changePct = prevClose > 0 ? change / prevClose * 100 : 0.0;
