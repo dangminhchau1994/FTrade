@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/services/notification_service.dart';
+import '../../../watchlist/data/services/contextual_alert_monitor.dart';
 import '../providers/theme_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -54,6 +56,38 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('VNDirect'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {},
+          ),
+          const Divider(),
+          const _SettingsSection(title: 'Developer'),
+          ListTile(
+            leading: const Icon(Icons.notifications_active_outlined),
+            title: const Text('Test local notification'),
+            subtitle: const Text('Kiểm tra notification hoạt động'),
+            onTap: () async {
+              await NotificationService.showContextualAlert(
+                id: 'test_${DateTime.now().millisecondsSinceEpoch}',
+                title: '🔔 Test thành công',
+                body: 'Notification hoạt động bình thường!',
+              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã gửi test notification')),
+                );
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.manage_search),
+            title: const Text('Scan sự kiện watchlist ngay'),
+            subtitle: const Text('Chạy Contextual Alert monitor thủ công'),
+            onTap: () async {
+              await ref.read(contextualAlertMonitorProvider).check();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã scan xong — kiểm tra notification')),
+                );
+              }
+            },
           ),
           const Divider(),
           const _SettingsSection(title: 'Khác'),

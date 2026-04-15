@@ -30,11 +30,6 @@ class ScaffoldWithNavBar extends StatelessWidget {
             label: 'Tổng quan',
           ),
           NavigationDestination(
-            icon: Icon(Icons.candlestick_chart_outlined),
-            selectedIcon: Icon(Icons.candlestick_chart),
-            label: 'Thị trường',
-          ),
-          NavigationDestination(
             icon: Icon(Icons.newspaper_outlined),
             selectedIcon: Icon(Icons.newspaper),
             label: 'Tin tức',

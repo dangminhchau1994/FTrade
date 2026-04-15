@@ -175,7 +175,7 @@ class HomeScreen extends ConsumerWidget {
             ),
 
             // Top Gainers
-            _SectionHeader(title: 'Top tăng giá', onViewAll: () => context.go('/market')),
+            _SectionHeader(title: 'Top tăng giá', onViewAll: () => context.push('/market')),
             topGainers.when(
               data: (stocks) => Column(
                 children: stocks

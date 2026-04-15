@@ -119,11 +119,15 @@ async function fetchEventRows(
     showColor: "False",
     showPopup: "False",
     showLatestNews: "False",
-  })) as unknown[];
+  }));
 
-  const rows = Array.isArray(payload) && Array.isArray(payload[0]) ? payload[0] : payload;
+  // API có thể trả về: [[rows...], meta] hoặc [rows...] hoặc null/object
+  if (!Array.isArray(payload)) return [];
+  const rows: unknown[] = Array.isArray(payload[0]) ? (payload[0] as unknown[]) : payload;
+  if (!Array.isArray(rows)) return [];
+
   return (rows as Record<string, unknown>[]).map((r) => ({
-    ...r,
+    ...(typeof r === "object" && r !== null ? r : {}),
     __channelId: channelId,
     __eventTypeId: eventTypeId,
   }));

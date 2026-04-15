@@ -134,10 +134,8 @@ class MarketRealtimeDatasource {
 
       _cache[data.symbol] = data;
       if (!_dataController.isClosed) _dataController.add(data);
-    } catch (e) {
-      // Log at debug level — wire-type mismatches are expected for some
-      // symbols whose server-side schema differs slightly from ours.
-      _logger.t('Proto decode skip ${msg.topic}: $e');
+    } catch (_) {
+      // Silently skip — wire-type mismatches are expected noise for some symbols.
     }
   }
 

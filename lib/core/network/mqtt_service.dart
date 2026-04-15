@@ -80,7 +80,8 @@ class MqttService {
       ..logging(on: false);
 
     // SSI dùng self-signed cert → accept tất cả cert cho WSS connection
-    _client!.onBadCertificate = (_) => true;
+    // mqtt_client 10.8.0+ dùng Object thay vì X509Certificate
+    _client!.onBadCertificate = (Object _) => true;
 
     _client!.connectionMessage = MqttConnectMessage()
         .withClientIdentifier(clientId)

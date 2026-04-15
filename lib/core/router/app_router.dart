@@ -59,6 +59,11 @@ final appRouter = GoRouter(
       ),
     ),
     GoRoute(
+      path: '/market',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => const MarketScreen(),
+    ),
+    GoRoute(
       path: '/corporate',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const CorporateScreen(),
@@ -102,14 +107,6 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/home',
               builder: (context, state) => const HomeScreen(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/market',
-              builder: (context, state) => const MarketScreen(),
             ),
           ],
         ),
