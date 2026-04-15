@@ -215,18 +215,41 @@
 - [x] CÒN LẠI: Tạo subscription `ftrade_premium_monthly` trên App Store Connect + Google Play
 - [x] CÒN LẠI: Thêm secrets `APPLE_SHARED_SECRET`, `GOOGLE_PLAY_SERVICE_ACCOUNT`
 
-### 2026-04-12 - Epic 6: Smart Watchlist (đang làm)
+### 2026-04-15 - Epic 6: Smart Watchlist ✅ DONE
 - [x] `WatchlistGroup` entity — id, name, symbols, createdAt, isAiGenerated, briefDate, sectorId
 - [x] `WatchlistGroupsNotifier` — Hive-backed StateNotifier, addGroup/removeGroup/addSymbol/removeSymbol
 - [x] `groupStocksProvider` — FutureProvider.family keyed by groupId, fetch live prices
-- [x] `WatchlistScreen` rewrite — 2 sections: "Watchlist AI" (gold, AI groups) + "Watchlist của bạn" (user groups)
-- [x] `_AiGroupCard` — expandable, linear list (StockListTile + company name lazy load), swipe xóa symbol
+- [x] `WatchlistScreen` rewrite — 2 sections: "Watchlist AI" (gold) + "Watchlist được tạo bởi bạn" (blue)
+- [x] `_GroupCard` unified widget — expandable, linear list (StockListTile + company name lazy load), swipe xóa symbol, delete button với confirm dialog
 - [x] `StockListTile` — thêm optional `companyName` param, hiển thị tên công ty thay volume khi có
 - [x] `_AiWatchlistGroupBanner` trên MorningBriefScreen — tạo 1 group per sector (không add flat)
   - Tên group: "{SectorName} · AI dd/MM", isAiGenerated=true, lưu Hive
   - Idempotent: check hasGroupForBriefDate() trước khi tạo
-- [ ] CÒN LẠI: User-created watchlist groups ("+": tạo group thủ công, add mã vào group)
-- [ ] CÒN LẠI: Xóa section "Theo dõi thủ công" (flat list), thay bằng user-created groups
+- [x] User-created groups: AppBar "+" → dialog nhập tên → tạo group → push `/search?groupId=...`
+- [x] `SearchScreen` add mode — nhận groupId qua GoRouter extra, hiển thị checkmark, nút "Xong"
+- [x] Bỏ section "Theo dõi thủ công" (flat list), thay hoàn toàn bằng user-created groups
+- [x] Firestore sync: `watchlistSymbols` flat array trên user doc (cho backend query)
+
+### 2026-04-15 - Contextual Alerts ✅ DONE
+- [x] `ContextualAlertMonitor` — local notification khi có sự kiện doanh nghiệp trong 3 ngày tới
+  - Thu thập symbols từ tất cả groups + flat watchlist
+  - Batch API call 5 symbols/lần (CorporateApiDatasource)
+  - Dedup qua Hive box `contextual_alerts_shown` (key = symbol_type_date)
+- [x] Wire vào `main.dart`: check khi app start + app resume lifecycle
+- [x] Backend cron: `run-check-events.ts` — gửi FCM per user dựa trên `watchlistSymbols` Firestore
+  - Fetch Vietstock events 1 lần, match với từng user
+  - Dedup qua `sentEventAlerts` array trên user doc
+- [x] `backend/lib/vietstock-client.ts` — TypeScript port: CSRF+cookie auth, `fetchUpcomingEvents(daysAhead)`
+- [x] GitHub Actions: thêm step "Check Corporate Events & Send Alerts" vào `morning-brief.yml`
+- [x] `SettingsScreen`: Developer section — test local notification + scan watchlist events manually
+
+### 2026-04-15 - UI/UX & Bug Fixes
+- [x] Bỏ tab "Thị trường" khỏi bottom nav (nay 5 tabs), market là full-screen push route
+- [x] HomeScreen "Xem tất cả" dùng `context.push('/market')` thay `context.go`
+- [x] Fix MQTT: `onBadCertificate` signature cho `mqtt_client 10.8.0` — `(Object _) => true`
+- [x] Silence proto decode wire-type noise (catch block trống, không log)
+- [x] Fix CI: `ts-node` → `tsx` (esbuild-based) cho Node 22 compatibility
+- [x] Fix `rows.map is not a function`: thêm `Array.isArray()` guards trong vietstock-client.ts
 
 ## Phase 4: Giao dịch (chưa bắt đầu)
 - [ ] Tích hợp VNDirect API, vào lệnh tự động
