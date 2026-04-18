@@ -13,6 +13,7 @@ import '../../features/watchlist/presentation/screens/watchlist_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/corporate/presentation/screens/corporate_screen.dart';
 import '../../features/money_flow/presentation/screens/money_flow_screen.dart';
+import '../../features/money_flow/presentation/screens/foreign_heatmap_screen.dart';
 import '../../features/fundamental/presentation/screens/fa_dashboard_screen.dart';
 import '../../features/fundamental/presentation/screens/financial_statement_screen.dart';
 import '../../features/fundamental/presentation/screens/industry_comparison_screen.dart';
@@ -73,6 +74,13 @@ final appRouter = GoRouter(
       path: '/money-flow',
       parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const MoneyFlowScreen(),
+    ),
+    GoRoute(
+      path: '/foreign-heatmap',
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) => ForeignHeatmapScreen(
+        catId: (state.extra as String?) ?? '',
+      ),
     ),
     GoRoute(
       path: '/financials/:symbol',

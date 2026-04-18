@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../providers/news_providers.dart';
 import '../../domain/entities/news_article.dart';
@@ -43,13 +45,13 @@ class NewsScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.article_outlined, size: 48, color: Colors.grey),
+                  const Icon(Icons.article_outlined, size: 48, color: AppColors.base40),
                   const SizedBox(height: 12),
                   Text(
                     filter != null
                         ? 'Không có tin tức cho $filter'
                         : 'Không có tin tức',
-                    style: const TextStyle(color: Colors.grey),
+                    style: AppTextStyle.b14R.copyWith(color: AppColors.base50),
                   ),
                 ],
               ),
@@ -83,9 +85,8 @@ class NewsScreen extends ConsumerWidget {
                         const SizedBox(height: 6),
                         Text(
                           article.summary!,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[400],
+                          style: AppTextStyle.s12R.copyWith(
+                            color: AppColors.base40,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -96,18 +97,15 @@ class NewsScreen extends ConsumerWidget {
                         children: [
                           Text(
                             article.source,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
+                            style: AppTextStyle.s12S.copyWith(
+                              color: AppColors.primary50,
                             ),
                           ),
                           const SizedBox(width: 12),
                           Text(
                             FormatUtils.timeAgo(article.publishedAt),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
+                            style: AppTextStyle.s12R.copyWith(
+                              color: AppColors.base60,
                             ),
                           ),
                           const Spacer(),

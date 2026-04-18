@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../domain/entities/corporate_event.dart';
 import '../providers/corporate_providers.dart';
 
@@ -57,13 +59,7 @@ class _MonthSection extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Text(
-            'Tháng $month',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          child: Text('Tháng $month', style: AppTextStyle.sectionHeader),
         ),
         ...events.map((e) => _EventTile(event: e)),
       ],
@@ -94,15 +90,15 @@ class _EventTile extends StatelessWidget {
   Color _color() {
     switch (event.type) {
       case CorporateEventType.earnings:
-        return Colors.blue;
+        return AppColors.info;
       case CorporateEventType.agm:
-        return Colors.orange;
+        return AppColors.primary50;
       case CorporateEventType.dividend:
-        return Colors.green;
+        return AppColors.gain;
       case CorporateEventType.rightsIssue:
-        return Colors.purple;
+        return AppColors.ceiling;
       case CorporateEventType.other:
-        return Colors.grey;
+        return AppColors.base40;
     }
   }
 
@@ -126,18 +122,14 @@ class _EventTile extends StatelessWidget {
             ),
             child: Text(
               event.symbol,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: color,
-              ),
+              style: AppTextStyle.s12B.copyWith(color: color),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               event.title,
-              style: const TextStyle(fontSize: 13),
+              style: AppTextStyle.s12R,
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -145,7 +137,7 @@ class _EventTile extends StatelessWidget {
       ),
       subtitle: Text(
         DateFormat('dd/MM/yyyy').format(event.eventDate),
-        style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+        style: AppTextStyle.c10R.copyWith(color: AppColors.base50),
       ),
       dense: true,
     );

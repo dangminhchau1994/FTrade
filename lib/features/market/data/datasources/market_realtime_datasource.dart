@@ -1,183 +1,191 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:logger/logger.dart';
-import 'package:mqtt_client/mqtt_client.dart';
 
-import '../../../../core/constants/api_constants.dart';
-import '../../../../core/network/mqtt_service.dart';
+import '../../../../core/network/socket_cluster_service.dart';
 import '../../domain/entities/realtime_market_data.dart';
-import '../proto/stock_data.pb.dart';
 
 final _logger = Logger();
-
 const _maxCacheSize = 500;
 
-/// Datasource realtime dùng MQTT + protobuf (SSI price-streaming)
+/// Realtime datasource cho stock data qua MASVN SocketCluster WebSocket.
+///
+/// Channel: market.quote.{SYMBOL} → SymbolData JSON (msgpack)
+/// Prices  : raw VND integers (e.g. 149800 = 149,800đ)
+/// r field : change percent already in % units (e.g. 2.5 = 2.5%)
 class MarketRealtimeDatasource {
-  MqttService? _mqtt;
-  StreamSubscription? _messageSub;
+  final SocketClusterService _socket;
+
+  StreamSubscription? _publishSub;
   StreamSubscription? _statusSub;
 
-  final Set<String> _topics = {};
+  final Set<String> _subscribedSymbols = {};
   final Map<String, RealtimeMarketData> _cache = {};
 
-  final _dataController = StreamController<RealtimeMarketData>.broadcast();
-  final _statusController = StreamController<MqttConnectionStatus>.broadcast();
+  final _dataCtrl = StreamController<RealtimeMarketData>.broadcast();
+  final _statusCtrl = StreamController<SocketConnectionStatus>.broadcast();
 
-  Stream<RealtimeMarketData> get dataStream => _dataController.stream;
-  Stream<MqttConnectionStatus> get statusStream => _statusController.stream;
-  MqttConnectionStatus get status =>
-      _mqtt?.status ?? MqttConnectionStatus.disconnected;
-  int get mqttMessageCount => _mqtt?.messageCount ?? 0;
-  DateTime? get mqttLastMessage => _mqtt?.lastMessageAt;
-  String? get mqttLastError => _mqtt?.lastError;
+  Stream<RealtimeMarketData> get dataStream => _dataCtrl.stream;
+  Stream<SocketConnectionStatus> get statusStream => _statusCtrl.stream;
+  SocketConnectionStatus get status => _socket.status;
+  int get messageCount => _socket.messageCount;
+  DateTime? get lastMessageAt => _socket.lastMessageAt;
+  String? get lastError => _socket.lastError;
 
   Stream<RealtimeMarketData> stockStream(String symbol) =>
-      _dataController.stream.where((d) => d.symbol == symbol.toUpperCase());
+      _dataCtrl.stream.where((d) => d.symbol == symbol.toUpperCase());
+
+  MarketRealtimeDatasource(this._socket);
 
   Future<void> connect() async {
-    if (_mqtt != null) return;
+    if (_publishSub != null) return;
 
-    _mqtt = MqttService(
-      url: ApiConstants.ssiMqttUrl,
-      username: ApiConstants.ssiMqttUsername,
-      password: ApiConstants.ssiMqttPassword,
-    );
-
-    _statusSub = _mqtt!.statusStream.listen((s) {
-      if (!_statusController.isClosed) _statusController.add(s);
-
-      if (s == MqttConnectionStatus.connected) {
-        _messageSub?.cancel();
-        _messageSub = _mqtt!.messageStream.listen(_handleMessage);
-
-        for (final topic in _topics) {
-          _mqtt!.subscribe(topic);
-        }
-        if (_topics.isNotEmpty) {
-          _logger.i('MQTT re-subscribed ${_topics.length} topics');
-        }
-      }
+    _statusSub = _socket.statusStream.listen((s) {
+      if (!_statusCtrl.isClosed) _statusCtrl.add(s);
     });
 
-    _messageSub = _mqtt!.messageStream.listen(_handleMessage);
-    await _mqtt!.connect();
+    _publishSub = _socket.publishStream.listen((event) {
+      _handlePublish(event.$1, event.$2);
+    });
+
+    await _socket.connect();
   }
 
+  /// Subscribe to MASVN index channels so home screen gets index data immediately.
   void subscribeAll() {
-    _addTopic('s/+/MAIN');
-    _logger.i('MQTT subscribed: s/+/MAIN');
+    for (final sym in _masvnIndexSymbols) {
+      _doSubscribe(sym);
+    }
+    _logger.i(
+      'SocketCluster: subscribed ${_masvnIndexSymbols.length} index channels',
+    );
   }
 
+  /// Idempotent per-symbol subscription — called lazily by UI providers.
   void subscribeStock(String symbol) {
-    _addTopic('s/${symbol.toUpperCase()}/MAIN');
+    _doSubscribe(symbol.toUpperCase());
   }
 
-  void _addTopic(String topic) {
-    _topics.add(topic);
-    _mqtt?.subscribe(topic);
+  void _doSubscribe(String symbol) {
+    if (_subscribedSymbols.contains(symbol)) return;
+    _subscribedSymbols.add(symbol);
+    _socket.subscribe('market.quote.$symbol');
   }
 
   Future<void> disconnect() async {
     await _statusSub?.cancel();
     _statusSub = null;
-    await _messageSub?.cancel();
-    _messageSub = null;
-    await _mqtt?.disconnect();
-    _mqtt = null;
-    _topics.clear();
+    await _publishSub?.cancel();
+    _publishSub = null;
+    _subscribedSymbols.clear();
     _cache.clear();
   }
 
   Future<void> dispose() async {
     await _statusSub?.cancel();
     _statusSub = null;
-    await _messageSub?.cancel();
-    _messageSub = null;
-    await _mqtt?.dispose();
-    _mqtt = null;
-    if (!_dataController.isClosed) await _dataController.close();
-    if (!_statusController.isClosed) await _statusController.close();
-    _topics.clear();
+    await _publishSub?.cancel();
+    _publishSub = null;
+    if (!_dataCtrl.isClosed) await _dataCtrl.close();
+    if (!_statusCtrl.isClosed) await _statusCtrl.close();
+    _subscribedSymbols.clear();
     _cache.clear();
   }
 
-  // SSI sends futures/index data (e.g. FUESSVFL, FUEVFVND) on the same
-  // wildcard s/+/MAIN but with a different proto schema. Skip non-stock topics.
-  static final _stockTopicRe = RegExp(r'^s/[A-Z]{1,5}/MAIN$');
+  // MASVN index symbols and their FTrade display names
+  static const _masvnIndexSymbols = [
+    'VN-INDEX',
+    'VN30',
+    'HNXIndex',
+    'HNX30',
+    'HNXUpcomIndex',
+  ];
 
-  void _handleMessage(MqttReceivedMessage<MqttMessage> msg) {
-    if (!_stockTopicRe.hasMatch(msg.topic)) return;
+  static const _indexSymbolMap = {
+    'VN-INDEX': 'VNINDEX',
+    'HNXIndex': 'HNXINDEX',
+    'HNXUpcomIndex': 'UPCOMINDEX',
+  };
+
+  static const _channelPrefix = 'market.quote.';
+
+  void _handlePublish(String channel, dynamic data) {
+    if (!channel.startsWith(_channelPrefix)) return;
+    if (data is! Map) return;
 
     try {
-      var bytes = mqttPayloadBytes(msg);
+      final rawSymbol = channel.substring(_channelPrefix.length);
+      final entity = _toEntity(rawSymbol, data);
+      if (entity == null) return;
 
-      // Detect gzip (magic bytes 0x1f 0x8b) and decompress
-      if (bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b) {
-        try {
-          bytes = Uint8List.fromList(gzip.decode(bytes));
-        } catch (_) {
-          _logger.d('Gzip decode failed on ${msg.topic}, skipping');
-          return;
-        }
-      }
+      final old = _cache[entity.symbol];
+      if (old == entity) return;
 
-      final proto = StockData.fromBuffer(bytes);
-      final data = _toEntity(proto);
-      if (data == null) return;
-
-      final old = _cache[data.symbol];
-      if (old == data) return;
-
-      if (_cache.length >= _maxCacheSize && !_cache.containsKey(data.symbol)) {
+      if (_cache.length >= _maxCacheSize &&
+          !_cache.containsKey(entity.symbol)) {
         _cache.remove(_cache.keys.first);
       }
+      _cache[entity.symbol] = entity;
 
-      _cache[data.symbol] = data;
-      if (!_dataController.isClosed) _dataController.add(data);
-    } catch (_) {
-      // Silently skip — wire-type mismatches are expected noise for some symbols.
-    }
+      if (!_dataCtrl.isClosed) _dataCtrl.add(entity);
+    } catch (_) {}
   }
 
-  // ── Proto → domain entity ──────────────────────────────────────────────────
+  static RealtimeMarketData? _toEntity(String rawSymbol, Map data) {
+    final displaySymbol =
+        _indexSymbolMap[rawSymbol] ?? rawSymbol.toUpperCase();
 
-  static RealtimeMarketData? _toEntity(StockData p) {
-    if (p.symbol.isEmpty) return null;
+    final c = _n(data['c']);
+    final refPrice = _n(data['re']);
+    if (c == 0 && refPrice == 0) return null;
+
+    final bb = _parseBidOfferList(data['bb']);
+    final bo = _parseBidOfferList(data['bo']);
 
     return RealtimeMarketData(
-      symbol: p.symbol.toUpperCase(),
-      matchedPrice: p.matchedPrice.toDouble(),
-      matchedVolume: p.matchedVolume,
-      change: _zigzag(p.priceChange).toDouble(),
-      changePercent: _zigzag(p.priceChangePercent) / 100.0,
-      totalVolume: p.totalVolume.toInt(),
-      totalValue: p.totalValue.toDouble(),
-      open: p.openPrice.toDouble(),
-      high: p.highPrice.toDouble(),
-      low: p.lowPrice.toDouble(),
-      ceiling: p.ceiling.toDouble(),
-      floor: p.floor.toDouble(),
-      refPrice: p.refPrice.toDouble(),
-      bid1Price: p.best1Bid.toDouble(),
-      bid1Volume: p.best1BidVol,
-      bid2Price: p.best2Bid.toDouble(),
-      bid2Volume: p.best2BidVol,
-      bid3Price: p.best3Bid.toDouble(),
-      bid3Volume: p.best3BidVol,
-      ask1Price: p.best1Offer.toDouble(),
-      ask1Volume: p.best1OfferVol,
-      ask2Price: p.best2Offer.toDouble(),
-      ask2Volume: p.best2OfferVol,
-      ask3Price: p.best3Offer.toDouble(),
-      ask3Volume: p.best3OfferVol,
-      foreignBuyVolume: p.buyForeignQtty.toInt(),
-      foreignSellVolume: p.sellForeignQtty.toInt(),
-      session: _parseSession(p.session),
+      symbol: displaySymbol,
+      matchedPrice: c,
+      matchedVolume: _i(data['mv']),
+      change: _n(data['ch']),
+      changePercent: _n(data['r']),
+      totalVolume: _i(data['vo']),
+      totalValue: _n(data['va']),
+      open: _n(data['o']),
+      high: _n(data['h']),
+      low: _n(data['l']),
+      ceiling: _n(data['ce']),
+      floor: _n(data['fl']),
+      refPrice: refPrice,
+      bid1Price: bb.isNotEmpty ? bb[0].$1 : 0,
+      bid1Volume: bb.isNotEmpty ? bb[0].$2 : 0,
+      bid2Price: bb.length > 1 ? bb[1].$1 : 0,
+      bid2Volume: bb.length > 1 ? bb[1].$2 : 0,
+      bid3Price: bb.length > 2 ? bb[2].$1 : 0,
+      bid3Volume: bb.length > 2 ? bb[2].$2 : 0,
+      ask1Price: bo.isNotEmpty ? bo[0].$1 : 0,
+      ask1Volume: bo.isNotEmpty ? bo[0].$2 : 0,
+      ask2Price: bo.length > 1 ? bo[1].$1 : 0,
+      ask2Volume: bo.length > 1 ? bo[1].$2 : 0,
+      ask3Price: bo.length > 2 ? bo[2].$1 : 0,
+      ask3Volume: bo.length > 2 ? bo[2].$2 : 0,
+      foreignBuyVolume: _i(data['frBvo']),
+      foreignSellVolume: _i(data['frSvo']),
+      session: _parseSession(data['ss']?.toString() ?? ''),
       updatedAt: DateTime.now(),
     );
+  }
+
+  static double _n(dynamic v) =>
+      v == null ? 0.0 : (v as num).toDouble();
+  static int _i(dynamic v) =>
+      v == null ? 0 : (v as num).toInt();
+
+  static List<(double price, int vol)> _parseBidOfferList(dynamic list) {
+    if (list is! List) return [];
+    return list.map<(double, int)>((e) {
+      if (e is! Map) return (0.0, 0);
+      return (_n(e['p']), _i(e['v']));
+    }).toList();
   }
 
   static TradingSession _parseSession(String session) {
@@ -191,6 +199,4 @@ class MarketRealtimeDatasource {
       _ => TradingSession.unknown,
     };
   }
-
-  static int _zigzag(int n) => (n >> 1) ^ -(n & 1);
 }

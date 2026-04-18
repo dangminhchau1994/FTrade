@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../../domain/entities/chart_point.dart' as app;
 import '../../../../core/widgets/market_breadth_bar.dart';
@@ -46,7 +47,7 @@ class IndexDetailScreen extends ConsumerWidget {
             return const Center(child: Text('Không có dữ liệu'));
           }
           final isUp = index.change >= 0;
-          final color = isUp ? AppTheme.gainColor : AppTheme.lossColor;
+          final color = isUp ? AppColors.gain : AppColors.loss;
 
           return ListView(
             children: [
@@ -61,11 +62,7 @@ class IndexDetailScreen extends ConsumerWidget {
                       children: [
                         Text(
                           FormatUtils.indexValue(index.value),
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
-                            color: color,
-                          ),
+                          style: AppTextStyle.indexValue.copyWith(color: color),
                         ),
                         const SizedBox(width: 12),
                         Padding(
@@ -75,11 +72,7 @@ class IndexDetailScreen extends ConsumerWidget {
                               index.change,
                               index.changePercent,
                             ),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: color,
-                            ),
+                            style: AppTextStyle.b16S.copyWith(color: color),
                           ),
                         ),
                       ],
@@ -102,13 +95,7 @@ class IndexDetailScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Độ rộng thị trường',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    Text('Độ rộng thị trường', style: AppTextStyle.sectionHeader),
                     const SizedBox(height: 10),
                     MarketBreadthBar(
                       advances: index.advances,
@@ -175,17 +162,13 @@ class _LiveBadge extends ConsumerWidget {
           height: 6,
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.green,
+            color: AppColors.gain,
           ),
         ),
         const SizedBox(width: 4),
         Text(
           'Live',
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.green[400],
-            fontWeight: FontWeight.w500,
-          ),
+          style: AppTextStyle.c10M.copyWith(color: AppColors.gainLight),
         ),
       ],
     );
@@ -227,7 +210,7 @@ class _IndexChartState extends ConsumerState<_IndexChart> {
             error: (_, __) => Center(
               child: Text(
                 'Không thể tải biểu đồ',
-                style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                style: AppTextStyle.s12R.copyWith(color: AppColors.base50),
               ),
             ),
           ),
@@ -250,18 +233,16 @@ class _IndexChartState extends ConsumerState<_IndexChart> {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? Theme.of(context).colorScheme.primaryContainer
-                        : Colors.transparent,
+                        : null,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
                     p,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                    style: (isSelected ? AppTextStyle.s12B : AppTextStyle.s12R)
+                        .copyWith(
                       color: isSelected
                           ? Theme.of(context).colorScheme.onPrimaryContainer
-                          : Colors.grey[500],
+                          : AppColors.base50,
                     ),
                   ),
                 ),
@@ -278,14 +259,14 @@ class _IndexChartState extends ConsumerState<_IndexChart> {
       return Center(
         child: Text(
           'No chart data',
-          style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+          style: AppTextStyle.s12R.copyWith(color: AppColors.base50),
         ),
       );
     }
 
     final cs = Theme.of(context).colorScheme;
     final isUp = data.last.close >= data.first.close;
-    final color = isUp ? AppTheme.gainColor : AppTheme.lossColor;
+    final color = isUp ? AppColors.gain : AppColors.loss;
 
     return SfCartesianChart(
       margin: const EdgeInsets.only(right: 4, left: 4),
@@ -378,10 +359,7 @@ class _TopStocksSection extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-          child: Text(
-            title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-          ),
+          child: Text(title, style: AppTextStyle.sectionHeader),
         ),
         async.when(
           data: (stocks) => Column(
@@ -443,16 +421,10 @@ class _StatsGrid extends StatelessWidget {
                   children: [
                     Text(
                       item.label,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      style: AppTextStyle.s12R.copyWith(color: AppColors.base50),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      item.value,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    Text(item.value, style: AppTextStyle.b14S),
                   ],
                 ),
               ),

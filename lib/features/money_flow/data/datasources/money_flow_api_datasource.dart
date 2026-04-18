@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/constants/api_constants.dart';
 import '../../../../core/network/vietstock_finance_client.dart';
 import '../../domain/entities/foreign_flow.dart';
+import '../../domain/entities/foreign_flow_stats.dart';
 import '../../domain/entities/market_flow_summary.dart';
 import '../../domain/entities/volume_anomaly.dart';
 
@@ -170,6 +171,55 @@ class MoneyFlowApiDatasource {
       );
     }
 
+    return history;
+  }
+
+  /// Today's totals for a specific exchange. [catId] = '' means all exchanges.
+  Future<ForeignFlowStats> getExchangeSummary({String catId = ''}) async {
+    final date = await _getLatestTradingDate();
+    final ids = catId.isEmpty ? _exchangeIds : [catId];
+    final batches = await Future.wait(
+      ids.map((id) => _fetchExchangeBatch(date: date, exchangeId: id, page: 1)),
+    );
+    final totals = batches.fold<_MarketTotals>(
+      const _MarketTotals.empty(),
+      (acc, batch) => acc + batch.totals,
+    );
+    return ForeignFlowStats(
+      buyVolume: totals.buyVolume,
+      sellVolume: totals.sellVolume,
+      netVolume: totals.netVolume,
+      buyValue: totals.buyValue,
+      sellValue: totals.sellValue,
+      netValue: totals.netValue,
+      date: date,
+    );
+  }
+
+  /// 10-session net-value history for a specific exchange. [catId] = '' = all.
+  Future<List<ForeignFlow>> getExchangeFlowHistory({String catId = ''}) async {
+    final dates = await _getRecentTradingDates(10);
+    final ids = catId.isEmpty ? _exchangeIds : [catId];
+    final history = <ForeignFlow>[];
+    for (final date in dates) {
+      final batches = await Future.wait(
+        ids.map((id) => _fetchExchangeBatch(date: date, exchangeId: id, page: 1)),
+      );
+      final totals = batches.fold<_MarketTotals>(
+        const _MarketTotals.empty(),
+        (acc, batch) => acc + batch.totals,
+      );
+      history.add(ForeignFlow(
+        symbol: catId.isEmpty ? 'ALL' : catId,
+        buyVolume: totals.buyVolume,
+        sellVolume: totals.sellVolume,
+        netVolume: totals.netVolume,
+        buyValue: totals.buyValue,
+        sellValue: totals.sellValue,
+        netValue: totals.netValue,
+        date: date,
+      ));
+    }
     return history;
   }
 

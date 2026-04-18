@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/stock_list_tile.dart';
 import '../../../market/presentation/providers/market_providers.dart';
 import '../../domain/entities/watchlist_group.dart';
@@ -17,6 +18,14 @@ class WatchlistScreen extends ConsumerWidget {
     final aiGroups = groups.where((g) => g.isAiGenerated).toList();
     final userGroups = groups.where((g) => !g.isAiGenerated).toList();
     final hasContent = groups.isNotEmpty;
+
+    // Group AI watchlists by date label, preserving insertion order (newest first)
+    final Map<String, List<WatchlistGroup>> aiByDate = {};
+    for (final g in aiGroups) {
+      final raw = g.briefDate ?? g.createdAt.toIso8601String();
+      final key = _parseDateLabel(raw);
+      aiByDate.putIfAbsent(key, () => []).add(g);
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -36,7 +45,7 @@ class WatchlistScreen extends ConsumerWidget {
               },
               child: CustomScrollView(
                 slivers: [
-                  // ── AI Watchlist Groups ──
+                  // ── AI Watchlist Groups — grouped by date ──
                   if (aiGroups.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: _SectionHeader(
@@ -45,13 +54,19 @@ class WatchlistScreen extends ConsumerWidget {
                         color: const Color(0xFFF59E0B),
                       ),
                     ),
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, i) => _GroupCard(group: aiGroups[i]),
-                        childCount: aiGroups.length,
+                    for (final entry in aiByDate.entries) ...[
+                      SliverToBoxAdapter(
+                        child: _DateDivider(label: entry.key),
                       ),
-                    ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, i) => _GroupCard(group: entry.value[i]),
+                          childCount: entry.value.length,
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                    ],
+                    const SliverToBoxAdapter(child: SizedBox(height: 4)),
                   ],
 
                   // ── User Watchlist Groups ──
@@ -77,6 +92,18 @@ class WatchlistScreen extends ConsumerWidget {
     );
   }
 
+  /// Converts any date string → "dd/MM/YYYY" display label.
+  static String _parseDateLabel(String raw) {
+    try {
+      final dt = DateTime.parse(raw);
+      final d = dt.day.toString().padLeft(2, '0');
+      final m = dt.month.toString().padLeft(2, '0');
+      return '$d/$m/${dt.year}';
+    } catch (_) {
+      return raw;
+    }
+  }
+
   Future<void> _showCreateGroupDialog(BuildContext context, WidgetRef ref) async {
     final name = await showDialog<String>(
       context: context,
@@ -98,6 +125,53 @@ class WatchlistScreen extends ConsumerWidget {
     if (context.mounted) {
       context.push('/search', extra: group.id);
     }
+  }
+}
+
+// ── Date Divider ────────────────────────────────────────────────────────────
+
+class _DateDivider extends StatelessWidget {
+  final String label;
+  const _DateDivider({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                width: 0.8,
+              ),
+            ),
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFF59E0B),
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Divider(
+              height: 1,
+              thickness: 0.5,
+              color: cs.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -150,7 +224,7 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
     final group = widget.group;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       decoration: BoxDecoration(
         color: cs.surface,
         borderRadius: BorderRadius.circular(12),
@@ -230,8 +304,8 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
                       background: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
-                        color: Colors.red,
-                        child: const Icon(Icons.delete, color: Colors.white),
+                        color: AppColors.loss,
+                        child: const Icon(Icons.delete, color: AppColors.white),
                       ),
                       onDismissed: (_) => ref
                           .read(watchlistGroupsProvider.notifier)
@@ -277,7 +351,7 @@ class _GroupCardState extends ConsumerState<_GroupCard> {
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Huỷ')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.loss),
             child: const Text('Xoá'),
           ),
         ],

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../../../core/widgets/stock_list_tile.dart';
 import '../../../watchlist/presentation/providers/watchlist_group_provider.dart';
 import '../providers/market_providers.dart';
@@ -99,9 +101,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           : results.when(
               data: (stocks) {
                 if (stocks.isEmpty) {
-                  return const Center(
-                    child: Text('Không tìm thấy kết quả',
-                        style: TextStyle(color: Colors.grey)),
+                  return Center(
+                    child: Text(
+                      'Không tìm thấy kết quả',
+                      style: AppTextStyle.b14R.copyWith(color: AppColors.base50),
+                    ),
                   );
                 }
                 return ListView.separated(
@@ -154,8 +158,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Tìm kiếm phổ biến',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey)),
+          Text('Tìm kiếm phổ biến',
+              style: AppTextStyle.sectionHeader.copyWith(color: AppColors.base50)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,

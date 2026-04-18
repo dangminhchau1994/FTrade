@@ -5,7 +5,10 @@ class ApiConstants {
   static const String vietstockTvNew = 'https://api.vietstock.vn/tvnew';
   static const String vietstockFinanceBase = 'https://finance.vietstock.vn';
 
-  // SSI Price Streaming MQTT (realtime market data)
+  // MASVN SocketCluster WebSocket (realtime market data)
+  static const String masvnSocketUrl = 'wss://nmts.masvn.com/ws/';
+
+  // SSI Price Streaming MQTT (kept for fallback / chart API)
   static const String ssiMqttUrl = 'wss://price-streaming.ssi.com.vn/mqtt';
   static const String ssiMqttUsername = 'mqtt-ssi';
   static const String ssiMqttPassword = 'mqtt-ssi';

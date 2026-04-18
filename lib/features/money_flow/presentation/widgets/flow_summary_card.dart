@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 
 class FlowSummaryCard extends StatelessWidget {
   final double totalBuy;
@@ -23,7 +24,7 @@ class FlowSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPositive = totalNet >= 0;
-    final netColor = isPositive ? AppTheme.gainColor : AppTheme.lossColor;
+    final netColor = isPositive ? AppColors.gain : AppColors.loss;
 
     return Card(
       margin: const EdgeInsets.all(16),
@@ -33,28 +34,20 @@ class FlowSummaryCard extends StatelessWidget {
           children: [
             Text(
               'Dòng tiền nước ngoài',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[400],
-              ),
+              style: AppTextStyle.b14R.copyWith(color: AppColors.base40),
             ),
             const SizedBox(height: 12),
             Text(
               _formatBillion(totalNet),
-              style: TextStyle(
+              style: AppTextStyle.h24B.copyWith(
                 fontSize: 28,
-                fontWeight: FontWeight.bold,
                 color: netColor,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               isPositive ? 'Mua ròng' : 'Bán ròng',
-              style: TextStyle(
-                fontSize: 13,
-                color: netColor,
-                fontWeight: FontWeight.w500,
-              ),
+              style: AppTextStyle.s12M.copyWith(color: netColor),
             ),
             const SizedBox(height: 16),
             Row(
@@ -63,15 +56,15 @@ class FlowSummaryCard extends StatelessWidget {
                   child: _FlowItem(
                     label: 'Mua',
                     value: _formatBillion(totalBuy),
-                    color: AppTheme.gainColor,
+                    color: AppColors.gain,
                   ),
                 ),
-                Container(width: 1, height: 40, color: Colors.grey[700]),
+                Container(width: 1, height: 40, color: AppColors.base70),
                 Expanded(
                   child: _FlowItem(
                     label: 'Bán',
                     value: _formatBillion(-totalSell),
-                    color: AppTheme.lossColor,
+                    color: AppColors.loss,
                   ),
                 ),
               ],
@@ -100,16 +93,12 @@ class _FlowItem extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+          style: AppTextStyle.s12R.copyWith(color: AppColors.base50),
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
+          style: AppTextStyle.b14S.copyWith(color: color),
         ),
       ],
     );

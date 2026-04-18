@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/market/presentation/providers/market_data_controller.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_text_style.dart';
 import '../utils/format_utils.dart';
 
 class StockListTile extends ConsumerWidget {
@@ -33,28 +34,25 @@ class StockListTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
     final realtime = ref.watch(realtimeStockProvider(symbol));
     final hasRt = realtime != null && realtime.matchedPrice > 0;
 
     final displayPrice = hasRt ? realtime.matchedPrice : price;
     final displayChange = hasRt ? realtime.change : change;
-    final displayChangePercent = hasRt ? realtime.changePercent : changePercent;
+    final displayChangePercent =
+        hasRt ? realtime.changePercent : changePercent;
     final displayVolume = hasRt && realtime.totalVolume > 0
         ? realtime.totalVolume
         : volume;
 
-    // Dùng ceiling/floor/ref từ realtime nếu có, fallback về props
-    final displayCeiling = hasRt && realtime.ceiling > 0
-        ? realtime.ceiling
-        : ceiling ?? 0;
-    final displayFloor = hasRt && realtime.floor > 0
-        ? realtime.floor
-        : floor ?? 0;
-    final displayRef = hasRt && realtime.refPrice > 0
-        ? realtime.refPrice
-        : refPrice ?? 0;
+    final displayCeiling =
+        hasRt && realtime.ceiling > 0 ? realtime.ceiling : ceiling ?? 0;
+    final displayFloor =
+        hasRt && realtime.floor > 0 ? realtime.floor : floor ?? 0;
+    final displayRef =
+        hasRt && realtime.refPrice > 0 ? realtime.refPrice : refPrice ?? 0;
 
-    // Màu theo chuẩn TTCK VN nếu có đủ thông tin trần/sàn/TC
     final color = (displayCeiling > 0 && displayFloor > 0 && displayRef > 0)
         ? AppTheme.stockColor(
             price: displayPrice,
@@ -63,58 +61,53 @@ class StockListTile extends ConsumerWidget {
             refPrice: displayRef,
           )
         : displayChange > 0
-            ? AppTheme.gainColor
+            ? AppColors.gain
             : displayChange < 0
-                ? AppTheme.lossColor
-                : Colors.grey;
+                ? AppColors.loss
+                : AppColors.base40;
 
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
         child: Row(
           children: [
+            // Symbol
             SizedBox(
-              width: 60,
-              child: Text(
-                symbol,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
+              width: 62,
+              child: Text(symbol, style: AppTextStyle.stockSymbol),
             ),
+
+            // Company name or volume
             Expanded(
               child: companyName != null
                   ? Text(
                       companyName!,
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      style: AppTextStyle.s12R
+                          .copyWith(color: cs.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     )
                   : Text(
                       'KL: ${FormatUtils.volume(displayVolume)}',
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      style: AppTextStyle.s12R
+                          .copyWith(color: cs.onSurfaceVariant),
                     ),
             ),
+
+            // Price + change
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
                   FormatUtils.price(displayPrice),
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                  style: AppTextStyle.stockPrice.copyWith(color: color),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  FormatUtils.changeWithPercent(displayChange, displayChangePercent),
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 12,
-                  ),
+                  FormatUtils.changeWithPercent(
+                      displayChange, displayChangePercent),
+                  style: AppTextStyle.s12M.copyWith(color: color),
                 ),
               ],
             ),

@@ -301,5 +301,41 @@
 - [x] `flow_bar_chart.dart` rewrite: SfCartesianChart + ColumnSeries (cleaner, proper tooltip)
 - [x] `index_detail_screen.dart` chart rewrite: SplineAreaSeries + gradient + crosshair + zoom
 
+### 2026-04-18 - MASVN WebSocket Migration ✅ DONE
+- [x] Thay SSI MQTT → MASVN SocketCluster WebSocket (`wss://nmts.masvn.com/ws/`)
+- [x] `lib/core/network/socket_cluster_service.dart` — SocketCluster v1 protocol, msgpack binary, auto-reconnect
+  - Handshake `#handshake` → ack → subscribe channels
+  - Ping/pong: empty string frames
+  - Re-subscribe tất cả channels sau reconnect
+- [x] `market_realtime_datasource.dart` rewrite — dùng SocketClusterService, channel `market.quote.{symbol}`
+  - `subscribeAll()` subscribe 5 index channels ngay khi connect
+  - `subscribeStock(symbol)` lazy subscribe per symbol
+  - SymbolData JSON mapping: c→matchedPrice, ch→change, r→changePercent, bb/bo→bid/ask, ss→session
+- [x] `index_realtime_datasource.dart` rewrite — cùng SocketCluster connection, lấy `ic.up/dw/uc` cho breadth
+  - Bỏ SSI iboard chart polling (5s interval), thay bằng push data từ MASVN
+  - Map: VN-INDEX→VNINDEX, HNXIndex→HNXINDEX, HNXUpcomIndex→UPCOMINDEX
+- [x] `market_data_controller.dart` — thêm `socketClusterServiceProvider` (shared), cập nhật providers
+  - `realtimeStockProvider` tự gọi `subscribeStock(symbol)` lazily khi UI cần
+  - `marketConnectionStatusProvider` đổi type sang `SocketConnectionStatus`
+- [x] `settings_screen.dart` — cập nhật import + enum + field names
+- [x] `pubspec.yaml` — thêm `msgpack_dart: ^1.0.0`
+- [x] `api_constants.dart` — thêm `masvnSocketUrl`
+- NOTE: `_Http11Overrides` trong `main.dart` vẫn có ích cho WebSocket (cần HTTP/1.1 Upgrade)
+
+### 2026-04-16 - Design System Migration ✅ DONE
+- [x] `AppColors` class — MASVN MTS color palette (primary orange, stock semantic colors, neutral scale)
+- [x] `AppTextStyle` class — Manrope font, full typography scale (display/h/b/s/c sizes × R/M/S/B weights)
+- [x] `AppTheme.darkTheme` + `AppTheme.lightTheme` — full Material 3 theme (appBar, card, chip, input, button, tab, nav, snackbar, dialog)
+- [x] `assets/fonts/` — Manrope Regular/Medium/SemiBold/Bold added
+- [x] `pubspec.yaml` — font + assets declarations uncommented
+- [x] Migrate 18 files: all `Colors.grey`, `Colors.red/green/blue/orange/amber`, `AppTheme.gainColor/lossColor` → `AppColors.*` + `AppTextStyle.*`
+  - `home_screen`, `stock_detail_screen`, `search_screen`
+  - `news_screen`, `news_detail_screen`
+  - `stock_chart`, `index_detail_screen`, `flow_bar_chart`, `flow_ranking_list`, `flow_summary_card`
+  - `event_calendar`, `dividend_list`, `insider_trade_list`
+  - `financial_table`, `industry_comparison_screen`
+  - `watchlist_screen`, `add_alert_dialog`
+  - `settings_screen`, `connectivity_banner`, `market_breadth_bar`, `stock_change_text`, `stock_list_tile`
+
 ## Phase 4: Giao dịch (chưa bắt đầu)
 - [ ] Tích hợp VNDirect API, vào lệnh tự động

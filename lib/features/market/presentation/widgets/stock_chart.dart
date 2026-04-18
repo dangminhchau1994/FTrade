@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../data/datasources/chart_api_datasource.dart';
 import '../../domain/entities/chart_point.dart' as app;
 import '../providers/market_providers.dart';
@@ -263,8 +264,8 @@ class _StockChartState extends ConsumerState<StockChart> {
           highValueMapper: (p, _) => p.high,
           openValueMapper: (p, _) => p.open,
           closeValueMapper: (p, _) => p.close,
-          bearColor: AppTheme.lossColor,
-          bullColor: AppTheme.gainColor,
+          bearColor: AppColors.loss,
+          bullColor: AppColors.gain,
           enableSolidCandles: true,
           animationDuration: 500,
           width: 0.7,
@@ -325,8 +326,8 @@ class _StockChartState extends ConsumerState<StockChart> {
           xValueMapper: (p, _) => p.date,
           yValueMapper: (p, _) => p.volume.toDouble(),
           pointColorMapper: (p, _) => p.close >= p.open
-              ? AppTheme.gainColor.withValues(alpha: 0.45)
-              : AppTheme.lossColor.withValues(alpha: 0.45),
+              ? AppColors.gain.withValues(alpha: 0.45)
+              : AppColors.loss.withValues(alpha: 0.45),
           borderRadius:
               const BorderRadius.vertical(top: Radius.circular(1)),
           spacing: 0.15,
@@ -354,28 +355,28 @@ class _StockChartState extends ConsumerState<StockChart> {
         opposedPosition: true,
         axisLine: const AxisLine(width: 0),
         majorTickLines: const MajorTickLines(size: 0),
-        labelStyle: TextStyle(fontSize: 9, color: Colors.grey[500]),
+        labelStyle: AppTextStyle.c10R.copyWith(color: AppColors.base50),
         majorGridLines: MajorGridLines(
           width: 0.5,
-          color: Colors.grey.withValues(alpha: 0.2),
+          color: AppColors.base70.withValues(alpha: 0.3),
         ),
         plotBands: <PlotBand>[
           PlotBand(
             start: 30,
             end: 70,
-            color: Colors.grey.withValues(alpha: 0.06),
+            color: AppColors.base70.withValues(alpha: 0.06),
           ),
           PlotBand(
             start: 70,
             end: 70,
-            borderColor: AppTheme.lossColor.withValues(alpha: 0.4),
+            borderColor: AppColors.loss.withValues(alpha: 0.4),
             borderWidth: 1,
             dashArray: const <double>[4, 4],
           ),
           PlotBand(
             start: 30,
             end: 30,
-            borderColor: AppTheme.gainColor.withValues(alpha: 0.4),
+            borderColor: AppColors.gain.withValues(alpha: 0.4),
             borderWidth: 1,
             dashArray: const <double>[4, 4],
           ),
@@ -421,16 +422,16 @@ class _StockChartState extends ConsumerState<StockChart> {
         opposedPosition: true,
         axisLine: const AxisLine(width: 0),
         majorTickLines: const MajorTickLines(size: 0),
-        labelStyle: TextStyle(fontSize: 9, color: Colors.grey[500]),
+        labelStyle: AppTextStyle.c10R.copyWith(color: AppColors.base50),
         majorGridLines: MajorGridLines(
           width: 0.5,
-          color: Colors.grey.withValues(alpha: 0.2),
+          color: AppColors.base70.withValues(alpha: 0.3),
         ),
         plotBands: <PlotBand>[
           PlotBand(
             start: 0,
             end: 0,
-            borderColor: Colors.grey.withValues(alpha: 0.4),
+            borderColor: AppColors.base60.withValues(alpha: 0.4),
             borderWidth: 1,
           ),
         ],
@@ -457,10 +458,8 @@ class _StockChartState extends ConsumerState<StockChart> {
           macdType: MacdType.both,
           signalLineColor: const Color(0xFFF97316),
           macdLineColor: const Color(0xFF3B82F6),
-          histogramPositiveColor:
-              AppTheme.gainColor.withValues(alpha: 0.5),
-          histogramNegativeColor:
-              AppTheme.lossColor.withValues(alpha: 0.5),
+          histogramPositiveColor: AppColors.gain.withValues(alpha: 0.5),
+          histogramNegativeColor: AppColors.loss.withValues(alpha: 0.5),
           signalLineWidth: 1.2,
           animationDuration: 0,
         ),
@@ -480,7 +479,7 @@ class _SubPanelLabel extends StatelessWidget {
         padding: const EdgeInsets.only(left: 16, bottom: 2),
         child: Text(
           text,
-          style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+          style: AppTextStyle.c10R.copyWith(color: AppColors.base50),
         ),
       );
 }
@@ -502,16 +501,15 @@ class _IndicatorChip extends StatelessWidget {
   Widget build(BuildContext context) => FilterChip(
         label: Text(
           label,
-          style: TextStyle(
-            fontSize: 11,
-            color: active ? Colors.white : Colors.grey[400],
+          style: AppTextStyle.c10M.copyWith(
+            color: active ? AppColors.white : AppColors.base40,
           ),
         ),
         selected: active,
         onSelected: onToggle,
         selectedColor: color.withValues(alpha: 0.3),
         checkmarkColor: color,
-        backgroundColor: Colors.grey.withValues(alpha: 0.1),
+        backgroundColor: AppColors.base10.withValues(alpha: 0.5),
         visualDensity: VisualDensity.compact,
         padding: const EdgeInsets.symmetric(horizontal: 2),
       );
@@ -543,21 +541,16 @@ class _PeriodSelector extends StatelessWidget {
               padding: const EdgeInsets.symmetric(
                   horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? cs.primaryContainer
-                    : Colors.transparent,
+                color: isSelected ? cs.primaryContainer : null,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
                 p,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isSelected
-                      ? FontWeight.bold
-                      : FontWeight.normal,
+                style: (isSelected ? AppTextStyle.s12B : AppTextStyle.s12R)
+                    .copyWith(
                   color: isSelected
                       ? cs.onPrimaryContainer
-                      : Colors.grey[500],
+                      : AppColors.base50,
                 ),
               ),
             ),

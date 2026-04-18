@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/dio_provider.dart';
 import '../../data/datasources/money_flow_api_datasource.dart';
 import '../../domain/entities/foreign_flow.dart';
+import '../../domain/entities/foreign_flow_stats.dart';
 import '../../domain/entities/market_flow_summary.dart';
 import '../../domain/entities/volume_anomaly.dart';
 
@@ -37,4 +38,15 @@ final foreignFlowHistoryProvider =
 final volumeAnomaliesProvider = FutureProvider<List<VolumeAnomaly>>((ref) async {
   final ds = ref.watch(moneyFlowDatasourceProvider);
   return ds.getVolumeAnomalies();
+});
+
+/// [catId]: '' = tất cả, '2' = HSX, '1' = HNX, '3' = UPCOM
+final foreignExchangeSummaryProvider =
+    FutureProvider.family<ForeignFlowStats, String>((ref, catId) async {
+  return ref.watch(moneyFlowDatasourceProvider).getExchangeSummary(catId: catId);
+});
+
+final foreignExchangeHistoryProvider =
+    FutureProvider.family<List<ForeignFlow>, String>((ref, catId) async {
+  return ref.watch(moneyFlowDatasourceProvider).getExchangeFlowHistory(catId: catId);
 });

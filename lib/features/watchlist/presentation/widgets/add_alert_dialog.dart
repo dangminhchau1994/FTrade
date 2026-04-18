@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../providers/price_alert_providers.dart';
 
 class AddAlertDialog extends StatefulWidget {
@@ -36,7 +38,7 @@ class _AddAlertDialogState extends State<AddAlertDialog> {
         children: [
           Text(
             'Giá hiện tại: ${widget.currentPrice.toStringAsFixed(0)}',
-            style: TextStyle(color: Colors.grey[400], fontSize: 14),
+            style: AppTextStyle.b14R.copyWith(color: AppColors.base40),
           ),
           const SizedBox(height: 16),
           SegmentedButton<bool>(

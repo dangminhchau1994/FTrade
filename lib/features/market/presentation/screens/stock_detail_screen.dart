@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../../domain/entities/realtime_market_data.dart';
 import '../../../watchlist/presentation/providers/price_alert_providers.dart';
@@ -32,7 +33,7 @@ class StockDetailScreen extends ConsumerWidget {
           IconButton(
             icon: Icon(
               isInWatchlist ? Icons.star : Icons.star_outline,
-              color: isInWatchlist ? Colors.amber : null,
+              color: isInWatchlist ? AppColors.ref : null,
             ),
             onPressed: () {
               final notifier = ref.read(watchlistSymbolsProvider.notifier);
@@ -103,10 +104,7 @@ class StockDetailScreen extends ConsumerWidget {
                   children: [
                     Text(
                       stock.companyName,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[400],
-                      ),
+                      style: AppTextStyle.b14R.copyWith(color: AppColors.base40),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -114,22 +112,14 @@ class StockDetailScreen extends ConsumerWidget {
                       children: [
                         Text(
                           FormatUtils.price(displayPrice),
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: color,
-                          ),
+                          style: AppTextStyle.indexValue.copyWith(color: color),
                         ),
                         const SizedBox(width: 12),
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Text(
                             FormatUtils.changeWithPercent(displayChange, displayChangePct),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: color,
-                            ),
+                            style: AppTextStyle.b16S.copyWith(color: color),
                           ),
                         ),
                       ],
@@ -139,7 +129,7 @@ class StockDetailScreen extends ConsumerWidget {
                       children: [
                         Text(
                           '${stock.exchange} • ${FormatUtils.dateTime(displayUpdatedAt ?? DateTime.now())}',
-                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                          style: AppTextStyle.s12R.copyWith(color: AppColors.base50),
                         ),
                         if (hasRt) ...[
                           const SizedBox(width: 6),
@@ -148,16 +138,14 @@ class StockDetailScreen extends ConsumerWidget {
                             height: 6,
                             decoration: const BoxDecoration(
                               shape: BoxShape.circle,
-                              color: Colors.green,
+                              color: AppColors.gain,
                             ),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             'Live',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.green[400],
-                              fontWeight: FontWeight.w500,
+                            style: AppTextStyle.c10M.copyWith(
+                              color: AppColors.gainLight,
                             ),
                           ),
                         ],
@@ -219,13 +207,7 @@ class StockDetailScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Chỉ số cơ bản',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text('Chỉ số cơ bản', style: AppTextStyle.b16B),
                     const SizedBox(height: 12),
                     _InfoGrid(items: [
                       _InfoItem('P/E', stock.pe?.toStringAsFixed(1) ?? '-'),
@@ -255,13 +237,7 @@ class StockDetailScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Phân tích cơ bản',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text('Phân tích cơ bản', style: AppTextStyle.b16B),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -335,10 +311,7 @@ class _AlertsSection extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Cảnh báo giá',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
+              Text('Cảnh báo giá', style: AppTextStyle.b16B),
               IconButton(
                 icon: const Icon(Icons.add_alert, size: 22),
                 onPressed: () async {
@@ -359,7 +332,7 @@ class _AlertsSection extends ConsumerWidget {
           if (symbolAlerts.isEmpty)
             Text(
               'Chưa có cảnh báo nào',
-              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+              style: AppTextStyle.s12R.copyWith(color: AppColors.base50),
             )
           else
             ...symbolAlerts.map(
@@ -369,12 +342,11 @@ class _AlertsSection extends ConsumerWidget {
                   entry.value.isAbove
                       ? Icons.arrow_upward
                       : Icons.arrow_downward,
-                  color:
-                      entry.value.isAbove ? AppTheme.gainColor : AppTheme.lossColor,
+                  color: entry.value.isAbove ? AppColors.gain : AppColors.loss,
                 ),
                 title: Text(
                   '${entry.value.isAbove ? "Vượt" : "Dưới"} ${FormatUtils.price(entry.value.targetPrice)}',
-                  style: const TextStyle(fontSize: 14),
+                  style: AppTextStyle.b14R,
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -429,9 +401,9 @@ class _PriceRangeBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(3),
                 gradient: const LinearGradient(
                   colors: [
-                    Color(0xFF2196F3),
-                    Color(0xFFFFEB3B),
-                    Color(0xFFF44336),
+                    AppColors.floor,
+                    AppColors.ref,
+                    AppColors.ceiling,
                   ],
                 ),
               ),
@@ -444,8 +416,8 @@ class _PriceRangeBar extends StatelessWidget {
                 height: 12,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey, width: 2),
+                  color: AppColors.white,
+                  border: Border.all(color: AppColors.base40, width: 2),
                 ),
               ),
             ),
@@ -457,24 +429,15 @@ class _PriceRangeBar extends StatelessWidget {
           children: [
             Text(
               FormatUtils.price(floor),
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF2196F3),
-              ),
+              style: AppTextStyle.c10R.copyWith(color: AppColors.floor),
             ),
             Text(
               FormatUtils.price(ref),
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFFFFEB3B),
-              ),
+              style: AppTextStyle.c10R.copyWith(color: AppColors.ref),
             ),
             Text(
               FormatUtils.price(ceiling),
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFFF44336),
-              ),
+              style: AppTextStyle.c10R.copyWith(color: AppColors.ceiling),
             ),
           ],
         ),
@@ -498,10 +461,10 @@ class _BidAskTable extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _bidAskHeader('MUA', AppTheme.gainColor),
-                _bidAskRow(data.bid1Price, data.bid1Volume, AppTheme.gainColor),
-                _bidAskRow(data.bid2Price, data.bid2Volume, AppTheme.gainColor),
-                _bidAskRow(data.bid3Price, data.bid3Volume, AppTheme.gainColor),
+                _bidAskHeader('MUA', AppColors.gain),
+                _bidAskRow(data.bid1Price, data.bid1Volume, AppColors.gain),
+                _bidAskRow(data.bid2Price, data.bid2Volume, AppColors.gain),
+                _bidAskRow(data.bid3Price, data.bid3Volume, AppColors.gain),
               ],
             ),
           ),
@@ -510,10 +473,10 @@ class _BidAskTable extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _bidAskHeader('BÁN', AppTheme.lossColor),
-                _bidAskRow(data.ask1Price, data.ask1Volume, AppTheme.lossColor),
-                _bidAskRow(data.ask2Price, data.ask2Volume, AppTheme.lossColor),
-                _bidAskRow(data.ask3Price, data.ask3Volume, AppTheme.lossColor),
+                _bidAskHeader('BÁN', AppColors.loss),
+                _bidAskRow(data.ask1Price, data.ask1Volume, AppColors.loss),
+                _bidAskRow(data.ask2Price, data.ask2Volume, AppColors.loss),
+                _bidAskRow(data.ask3Price, data.ask3Volume, AppColors.loss),
               ],
             ),
           ),
@@ -527,11 +490,7 @@ class _BidAskTable extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(
         label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: color,
-        ),
+        style: AppTextStyle.s12B.copyWith(color: color),
       ),
     );
   }
@@ -545,11 +504,11 @@ class _BidAskTable extends StatelessWidget {
         children: [
           Text(
             FormatUtils.price(price),
-            style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w500),
+            style: AppTextStyle.s12M.copyWith(color: color),
           ),
           Text(
             FormatUtils.volume(volume),
-            style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+            style: AppTextStyle.s12R.copyWith(color: AppColors.base40),
           ),
         ],
       ),
@@ -584,19 +543,10 @@ class _InfoGrid extends StatelessWidget {
                   children: [
                     Text(
                       item.label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
+                      style: AppTextStyle.s12R.copyWith(color: AppColors.base50),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      item.value,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    Text(item.value, style: AppTextStyle.b14S),
                   ],
                 ),
               ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../providers/fundamental_providers.dart';
 import '../../domain/entities/industry_comparison.dart';
 
@@ -56,36 +57,33 @@ class _IndustryComparisonScreenState
                   dataRowMinHeight: 40,
                   dataRowMaxHeight: 40,
                   columns: [
-                    const DataColumn(label: Text('Mã CP', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
-                    DataColumn(label: const Text('P/E', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)), numeric: true, onSort: _onSort),
-                    DataColumn(label: const Text('P/B', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)), numeric: true, onSort: _onSort),
-                    DataColumn(label: const Text('ROE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)), numeric: true, onSort: _onSort),
-                    DataColumn(label: const Text('ROA', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)), numeric: true, onSort: _onSort),
-                    DataColumn(label: const Text('D/E', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)), numeric: true, onSort: _onSort),
-                    DataColumn(label: const Text('Vốn hóa\n(tỷ)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)), numeric: true, onSort: _onSort),
+                    DataColumn(label: Text('Mã CP', style: AppTextStyle.s12B)),
+                    DataColumn(label: Text('P/E', style: AppTextStyle.s12B), numeric: true, onSort: _onSort),
+                    DataColumn(label: Text('P/B', style: AppTextStyle.s12B), numeric: true, onSort: _onSort),
+                    DataColumn(label: Text('ROE', style: AppTextStyle.s12B), numeric: true, onSort: _onSort),
+                    DataColumn(label: Text('ROA', style: AppTextStyle.s12B), numeric: true, onSort: _onSort),
+                    DataColumn(label: Text('D/E', style: AppTextStyle.s12B), numeric: true, onSort: _onSort),
+                    DataColumn(label: Text('Vốn hóa\n(tỷ)', style: AppTextStyle.s12B), numeric: true, onSort: _onSort),
                   ],
                   rows: sorted.map((c) {
                     return DataRow(
                       color: WidgetStateProperty.resolveWith<Color?>(
                         (states) => c.isTarget
-                            ? AppTheme.gainColor.withValues(alpha: 0.1)
+                            ? AppColors.gainBg.withValues(alpha: 0.5)
                             : null,
                       ),
                       cells: [
                         DataCell(Text(
                           c.symbol,
-                          style: TextStyle(
-                            fontWeight: c.isTarget ? FontWeight.bold : FontWeight.w500,
-                            fontSize: 13,
-                            color: c.isTarget ? AppTheme.gainColor : null,
-                          ),
+                          style: (c.isTarget ? AppTextStyle.s12B : AppTextStyle.s12M)
+                              .copyWith(color: c.isTarget ? AppColors.gain : null),
                         )),
-                        DataCell(Text(c.pe.toStringAsFixed(1), style: const TextStyle(fontSize: 12))),
-                        DataCell(Text(c.pb.toStringAsFixed(1), style: const TextStyle(fontSize: 12))),
-                        DataCell(Text('${c.roe.toStringAsFixed(1)}%', style: const TextStyle(fontSize: 12))),
-                        DataCell(Text('${c.roa.toStringAsFixed(1)}%', style: const TextStyle(fontSize: 12))),
-                        DataCell(Text(c.debtToEquity.toStringAsFixed(2), style: const TextStyle(fontSize: 12))),
-                        DataCell(Text(c.marketCap.toStringAsFixed(0), style: const TextStyle(fontSize: 12))),
+                        DataCell(Text(c.pe.toStringAsFixed(1), style: AppTextStyle.s12R)),
+                        DataCell(Text(c.pb.toStringAsFixed(1), style: AppTextStyle.s12R)),
+                        DataCell(Text('${c.roe.toStringAsFixed(1)}%', style: AppTextStyle.s12R)),
+                        DataCell(Text('${c.roa.toStringAsFixed(1)}%', style: AppTextStyle.s12R)),
+                        DataCell(Text(c.debtToEquity.toStringAsFixed(2), style: AppTextStyle.s12R)),
+                        DataCell(Text(c.marketCap.toStringAsFixed(0), style: AppTextStyle.s12R)),
                       ],
                     );
                   }).toList(),

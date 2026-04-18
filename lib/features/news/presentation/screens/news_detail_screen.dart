@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../providers/news_providers.dart';
 
@@ -36,7 +38,7 @@ class NewsDetailScreen extends ConsumerWidget {
           IconButton(
             icon: Icon(
               isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
-              color: isBookmarked ? Colors.amber : null,
+              color: isBookmarked ? AppColors.ref : null,
             ),
             onPressed: () {
               final notifier = ref.read(bookmarkedNewsProvider.notifier);
@@ -74,11 +76,7 @@ class NewsDetailScreen extends ConsumerWidget {
               ],
               Text(
                 a.title,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  height: 1.3,
-                ),
+                style: AppTextStyle.h24B.copyWith(height: 1.3),
               ),
               const SizedBox(height: 12),
               Row(
@@ -102,11 +100,11 @@ class NewsDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+                  Icon(Icons.access_time, size: 14, color: AppColors.base50),
                   const SizedBox(width: 4),
                   Text(
                     FormatUtils.timeAgo(a.publishedAt),
-                    style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                    style: AppTextStyle.s12R.copyWith(color: AppColors.base50),
                   ),
                 ],
               ),
@@ -132,19 +130,15 @@ class NewsDetailScreen extends ConsumerWidget {
               if (a.summary != null)
                 Text(
                   a.summary!,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    height: 1.6,
-                  ),
+                  style: AppTextStyle.b16M.copyWith(height: 1.6),
                 ),
               const SizedBox(height: 16),
               Text(
                 a.content ?? a.summary ?? '',
-                style: TextStyle(
+                style: AppTextStyle.b14R.copyWith(
                   fontSize: 15,
                   height: 1.7,
-                  color: Colors.grey[300],
+                  color: AppColors.base30,
                 ),
               ),
             ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../domain/entities/foreign_flow.dart';
 
 class FlowRankingList extends StatelessWidget {
@@ -34,7 +35,7 @@ class FlowRankingList extends StatelessWidget {
       itemCount: flows.length,
       itemBuilder: (context, index) {
         final flow = flows[index];
-        final color = isBuyers ? AppTheme.gainColor : AppTheme.lossColor;
+        final color = isBuyers ? AppColors.gain : AppColors.loss;
 
         return ListTile(
           onTap: () => context.push('/stock/${flow.symbol}'),
@@ -43,28 +44,17 @@ class FlowRankingList extends StatelessWidget {
             backgroundColor: color.withValues(alpha: 0.15),
             child: Text(
               '${index + 1}',
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
+              style: AppTextStyle.s12B.copyWith(color: color),
             ),
           ),
-          title: Text(
-            flow.symbol,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-          ),
+          title: Text(flow.symbol, style: AppTextStyle.stockSymbol),
           subtitle: Text(
             'KL ròng: ${_formatVolume(flow.netVolume)}',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            style: AppTextStyle.s12R.copyWith(color: AppColors.base50),
           ),
           trailing: Text(
             _formatBillion(flow.netValue),
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
+            style: AppTextStyle.b14S.copyWith(color: color),
           ),
         );
       },

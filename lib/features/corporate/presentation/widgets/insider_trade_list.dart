@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../../domain/entities/insider_trade.dart';
 import '../providers/corporate_providers.dart';
@@ -73,16 +74,13 @@ class _InsiderTradeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isBuy = trade.tradeType == TradeType.buy;
-    final color = isBuy ? AppTheme.gainColor : AppTheme.lossColor;
+    final color = isBuy ? AppColors.gain : AppColors.loss;
 
     return ListTile(
       onTap: () => context.push('/stock/${trade.symbol}'),
       title: Row(
         children: [
-          Text(
-            trade.symbol,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
+          Text(trade.symbol, style: AppTextStyle.b14B),
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -92,21 +90,13 @@ class _InsiderTradeTile extends StatelessWidget {
             ),
             child: Text(
               isBuy ? 'MUA' : 'BÁN',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+              style: AppTextStyle.c10B.copyWith(color: color),
             ),
           ),
           const Spacer(),
           Text(
             '${FormatUtils.volume(trade.quantity)} CP',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
+            style: AppTextStyle.s12S.copyWith(color: color),
           ),
         ],
       ),
@@ -116,12 +106,12 @@ class _InsiderTradeTile extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             '${trade.traderName} • ${trade.position}',
-            style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+            style: AppTextStyle.s12R.copyWith(color: AppColors.base40),
             overflow: TextOverflow.ellipsis,
           ),
           Text(
             'Giá: ${FormatUtils.price(trade.price)} • ${FormatUtils.date(trade.tradeDate)}',
-            style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+            style: AppTextStyle.c10R.copyWith(color: AppColors.base60),
           ),
         ],
       ),

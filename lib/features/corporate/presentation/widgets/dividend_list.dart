@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../../domain/entities/dividend.dart';
 import '../providers/corporate_providers.dart';
@@ -36,7 +38,7 @@ class _DividendCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasCash = dividend.cashAmount > 0;
     final hasStock = dividend.ratio > 0;
-    final accentColor = hasCash ? Colors.green[400]! : Colors.blue[400]!;
+    final accentColor = hasCash ? AppColors.gainLight : AppColors.info;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -55,11 +57,7 @@ class _DividendCard extends StatelessWidget {
                   ),
                   child: Text(
                     dividend.symbol,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: accentColor,
-                      fontSize: 14,
-                    ),
+                    style: AppTextStyle.b14B.copyWith(color: accentColor),
                   ),
                 ),
                 const Spacer(),
@@ -67,9 +65,9 @@ class _DividendCard extends StatelessWidget {
                   Chip(
                     label: Text(
                       '${FormatUtils.price(dividend.cashAmount)} đ/CP',
-                      style: const TextStyle(fontSize: 11),
+                      style: AppTextStyle.c10M,
                     ),
-                    backgroundColor: Colors.green.withValues(alpha: 0.1),
+                    backgroundColor: AppColors.gainBg,
                     visualDensity: VisualDensity.compact,
                   ),
                 if (hasStock) ...[
@@ -77,9 +75,9 @@ class _DividendCard extends StatelessWidget {
                   Chip(
                     label: Text(
                       '${dividend.ratio.toStringAsFixed(0)}% CP',
-                      style: const TextStyle(fontSize: 11),
+                      style: AppTextStyle.c10M,
                     ),
-                    backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                    backgroundColor: AppColors.info.withValues(alpha: 0.12),
                     visualDensity: VisualDensity.compact,
                   ),
                 ],
@@ -93,7 +91,7 @@ class _DividendCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   dividend.note!,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  style: AppTextStyle.s12R.copyWith(color: AppColors.base50),
                 ),
               ),
           ],
@@ -117,12 +115,9 @@ class _InfoRow extends StatelessWidget {
         children: [
           Text(
             '$label: ',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            style: AppTextStyle.s12R.copyWith(color: AppColors.base50),
           ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-          ),
+          Text(value, style: AppTextStyle.s12M),
         ],
       ),
     );

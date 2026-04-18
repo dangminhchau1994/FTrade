@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../../../core/utils/format_utils.dart';
 import '../../../../core/widgets/market_breadth_bar.dart';
 import '../../../../core/widgets/stock_list_tile.dart';
@@ -77,19 +78,12 @@ class HomeScreen extends ConsumerWidget {
                         children: [
                           Text(
                             idx.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
+                            style: AppTextStyle.sectionHeader,
                           ),
                           Text(
                             FormatUtils.indexValue(idx.value),
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: isUp
-                                  ? AppTheme.gainColor
-                                  : AppTheme.lossColor,
+                            style: AppTextStyle.h20B.copyWith(
+                              color: isUp ? AppColors.gain : AppColors.loss,
                             ),
                           ),
                           Row(
@@ -98,19 +92,13 @@ class HomeScreen extends ConsumerWidget {
                                 isUp
                                     ? Icons.arrow_drop_up
                                     : Icons.arrow_drop_down,
-                                color: isUp
-                                    ? AppTheme.gainColor
-                                    : AppTheme.lossColor,
+                                color: isUp ? AppColors.gain : AppColors.loss,
                                 size: 20,
                               ),
                               Text(
                                 FormatUtils.indexChangeWithPercent(idx.change, idx.changePercent),
-                                style: TextStyle(
-                                  color: isUp
-                                      ? AppTheme.gainColor
-                                      : AppTheme.lossColor,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
+                                style: AppTextStyle.s12M.copyWith(
+                                  color: isUp ? AppColors.gain : AppColors.loss,
                                 ),
                               ),
                             ],
@@ -157,7 +145,7 @@ class HomeScreen extends ConsumerWidget {
                     child: _QuickAccessCard(
                       icon: Icons.swap_vert,
                       label: 'Dòng tiền',
-                      color: Colors.blue,
+                      color: AppColors.info,
                       onTap: () => context.push('/money-flow'),
                     ),
                   ),
@@ -166,7 +154,7 @@ class HomeScreen extends ConsumerWidget {
                     child: _QuickAccessCard(
                       icon: Icons.business,
                       label: 'Doanh nghiệp',
-                      color: Colors.orange,
+                      color: AppColors.primary50,
                       onTap: () => context.push('/corporate'),
                     ),
                   ),
@@ -220,7 +208,7 @@ class HomeScreen extends ConsumerWidget {
                           a.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 14),
+                          style: AppTextStyle.b14R,
                         ),
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 4),
@@ -228,17 +216,15 @@ class HomeScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 a.source,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontSize: 12,
+                                style: AppTextStyle.s12M.copyWith(
+                                  color: AppColors.primary50,
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 FormatUtils.timeAgo(a.publishedAt),
-                                style: TextStyle(
-                                  color: Colors.grey[500],
-                                  fontSize: 12,
+                                style: AppTextStyle.s12R.copyWith(
+                                  color: AppColors.base50,
                                 ),
                               ),
                             ],
@@ -285,30 +271,36 @@ class _QuickAccessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surfaceContainerHighest,
       borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 19),
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTextStyle.b14S.copyWith(color: cs.onSurface),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 18, color: cs.onSurfaceVariant),
+            ],
+          ),
         ),
       ),
     );
@@ -328,13 +320,7 @@ class _SectionHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(title, style: AppTextStyle.b16B),
           if (onViewAll != null)
             TextButton(
               onPressed: onViewAll,

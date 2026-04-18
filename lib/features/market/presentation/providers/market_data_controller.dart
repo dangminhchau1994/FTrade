@@ -2,17 +2,25 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/network/dio_provider.dart';
-import '../../../../core/network/mqtt_service.dart';
+import '../../../../core/constants/api_constants.dart';
+import '../../../../core/network/socket_cluster_service.dart';
 import '../../data/datasources/index_realtime_datasource.dart';
 import '../../data/datasources/market_realtime_datasource.dart';
 import '../../domain/entities/realtime_index_data.dart';
 import '../../domain/entities/realtime_market_data.dart';
 
+/// Shared SocketCluster connection — one WebSocket for all realtime data.
+final socketClusterServiceProvider = Provider<SocketClusterService>((ref) {
+  final service = SocketClusterService(url: ApiConstants.masvnSocketUrl);
+  ref.onDispose(() => service.dispose());
+  return service;
+});
+
 /// Provider cho MarketRealtimeDatasource singleton
 final marketRealtimeDatasourceProvider =
     Provider<MarketRealtimeDatasource>((ref) {
-  final datasource = MarketRealtimeDatasource();
+  final socket = ref.watch(socketClusterServiceProvider);
+  final datasource = MarketRealtimeDatasource(socket);
   ref.onDispose(() => datasource.dispose());
   return datasource;
 });
@@ -20,15 +28,15 @@ final marketRealtimeDatasourceProvider =
 /// Provider cho IndexRealtimeDatasource singleton
 final indexRealtimeDatasourceProvider =
     Provider<IndexRealtimeDatasource>((ref) {
-  final dio = ref.watch(dioClientProvider).dio;
-  final datasource = IndexRealtimeDatasource(dio);
+  final socket = ref.watch(socketClusterServiceProvider);
+  final datasource = IndexRealtimeDatasource(socket);
   ref.onDispose(() => datasource.dispose());
   return datasource;
 });
 
-/// Trạng thái kết nối MQTT
+/// Trạng thái kết nối WebSocket
 final marketConnectionStatusProvider =
-    StreamProvider<MqttConnectionStatus>((ref) {
+    StreamProvider<SocketConnectionStatus>((ref) {
   final datasource = ref.watch(marketRealtimeDatasourceProvider);
   return datasource.statusStream;
 });
@@ -43,13 +51,16 @@ class MarketDataController extends StateNotifier<MarketDataState> {
   MarketDataController(this._datasource, this._indexDatasource)
       : super(const MarketDataState());
 
-  /// Kết nối MQTT (stocks) + VNDIRECT WebSocket (indices)
+  /// Kết nối WebSocket (stocks + indices) qua shared SocketClusterService
   Future<void> connect() async {
     if (state.isConnected) return;
 
     state = state.copyWith(isConnecting: true);
 
     try {
+      // Both datasources share the same SocketCluster connection.
+      // _datasource.connect() starts the WebSocket; _indexDatasource.connect()
+      // is a no-op for the transport and only registers subscriptions.
       await Future.wait([
         _datasource.connect(),
         _indexDatasource.connect(),
@@ -146,16 +157,20 @@ final marketDataControllerProvider =
   return controller;
 });
 
-/// Realtime data cho 1 mã cụ thể (từ state cache)
+/// Realtime data cho 1 mã cụ thể (từ state cache).
+/// Gọi subscribeStock lazily để đảm bảo symbol được subscribe qua WebSocket.
 final realtimeStockProvider =
     Provider.family<RealtimeMarketData?, String>((ref, symbol) {
-  final state = ref.watch(marketDataControllerProvider);
-  return state.stocks[symbol.toUpperCase()];
+  // Side effect: subscribe when first accessed. Idempotent — safe here.
+  final datasource = ref.read(marketRealtimeDatasourceProvider);
+  datasource.subscribeStock(symbol);
+  return ref.watch(marketDataControllerProvider).stocks[symbol.toUpperCase()];
 });
 
 /// Stream provider cho 1 mã cụ thể
 final realtimeStockStreamProvider =
     StreamProvider.family<RealtimeMarketData, String>((ref, symbol) {
   final datasource = ref.watch(marketRealtimeDatasourceProvider);
+  datasource.subscribeStock(symbol);
   return datasource.stockStream(symbol);
 });

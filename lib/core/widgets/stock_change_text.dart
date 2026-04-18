@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/app_text_style.dart';
 import '../utils/format_utils.dart';
 
 class StockChangeText extends StatelessWidget {
@@ -21,17 +22,16 @@ class StockChangeText extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayColor = color ??
         (change > 0
-            ? AppTheme.gainColor
+            ? AppColors.gain
             : change < 0
-                ? AppTheme.lossColor
-                : Colors.grey);
+                ? AppColors.loss
+                : AppColors.base40);
 
     return Text(
       FormatUtils.changeWithPercent(change, changePercent),
-      style: TextStyle(
+      style: AppTextStyle.s12S.copyWith(
         color: displayColor,
         fontSize: fontSize,
-        fontWeight: FontWeight.w600,
       ),
     );
   }

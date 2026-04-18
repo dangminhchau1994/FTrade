@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../domain/entities/financial_statement.dart';
 
 class FinancialTable extends StatelessWidget {
@@ -35,18 +37,12 @@ class FinancialTable extends StatelessWidget {
           dataRowMinHeight: 36,
           dataRowMaxHeight: 36,
           columns: [
-            const DataColumn(
-              label: Text(
-                'Chỉ tiêu',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-              ),
+            DataColumn(
+              label: Text('Chỉ tiêu', style: AppTextStyle.s12B),
             ),
             ...periods.map(
               (p) => DataColumn(
-                label: Text(
-                  p,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                ),
+                label: Text(p, style: AppTextStyle.s12B),
                 numeric: true,
               ),
             ),
@@ -58,7 +54,7 @@ class FinancialTable extends StatelessWidget {
             return DataRow(
               color: WidgetStateProperty.resolveWith<Color?>(
                 (states) => isEven
-                    ? Colors.grey.withValues(alpha: 0.05)
+                    ? AppColors.base10.withValues(alpha: 0.3)
                     : null,
               ),
               cells: [
@@ -67,7 +63,7 @@ class FinancialTable extends StatelessWidget {
                     width: 160,
                     child: Text(
                       item,
-                      style: const TextStyle(fontSize: 12),
+                      style: AppTextStyle.s12R,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -77,9 +73,8 @@ class FinancialTable extends StatelessWidget {
                   return DataCell(
                     Text(
                       _formatValue(value),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: value < 0 ? Colors.red[400] : null,
+                      style: AppTextStyle.s12R.copyWith(
+                        color: value < 0 ? AppColors.loss : null,
                       ),
                     ),
                   );

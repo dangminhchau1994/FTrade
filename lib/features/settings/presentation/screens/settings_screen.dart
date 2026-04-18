@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/network/mqtt_service.dart';
+import '../../../../core/network/socket_cluster_service.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/theme/app_text_style.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../market/presentation/providers/market_data_controller.dart';
 import '../../../watchlist/data/services/contextual_alert_monitor.dart';
@@ -135,9 +137,9 @@ class _MqttStatusTileState extends ConsumerState<_MqttStatusTile> {
       final ds = ref.read(marketRealtimeDatasourceProvider);
       if (mounted) {
         setState(() {
-          _msgCount = ds.mqttMessageCount;
-          _lastMsg = ds.mqttLastMessage;
-          _lastError = ds.mqttLastError;
+          _msgCount = ds.messageCount;
+          _lastMsg = ds.lastMessageAt;
+          _lastError = ds.lastError;
         });
       }
     });
@@ -154,12 +156,12 @@ class _MqttStatusTileState extends ConsumerState<_MqttStatusTile> {
     final statusAsync = ref.watch(marketConnectionStatusProvider);
     final (label, color, icon) = statusAsync.when(
       data: (s) => switch (s) {
-        MqttConnectionStatus.connected    => ('Đã kết nối', Colors.green, Icons.wifi),
-        MqttConnectionStatus.connecting   => ('Đang kết nối...', Colors.orange, Icons.wifi_find),
-        MqttConnectionStatus.disconnected => ('Mất kết nối', Colors.red, Icons.wifi_off),
+        SocketConnectionStatus.connected    => ('Đã kết nối', AppColors.gain, Icons.wifi),
+        SocketConnectionStatus.connecting   => ('Đang kết nối...', AppColors.warning, Icons.wifi_find),
+        SocketConnectionStatus.disconnected => ('Mất kết nối', AppColors.loss, Icons.wifi_off),
       },
-      loading: () => ('Chờ...', Colors.grey, Icons.wifi_find),
-      error: (_, __) => ('Lỗi', Colors.red, Icons.error_outline),
+      loading: () => ('Chờ...', AppColors.base40, Icons.wifi_find),
+      error: (_, __) => ('Lỗi', AppColors.loss, Icons.error_outline),
     );
 
     final lastTime = _lastMsg == null
@@ -175,7 +177,7 @@ class _MqttStatusTileState extends ConsumerState<_MqttStatusTile> {
 
     return ListTile(
       leading: Icon(icon, color: color),
-      title: const Text('MQTT Realtime'),
+      title: const Text('MASVN Realtime'),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -186,7 +188,7 @@ class _MqttStatusTileState extends ConsumerState<_MqttStatusTile> {
           if (errSnippet != null)
             Text(
               errSnippet,
-              style: TextStyle(color: Colors.red[300], fontSize: 11),
+              style: AppTextStyle.c10R.copyWith(color: AppColors.lossLight),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),

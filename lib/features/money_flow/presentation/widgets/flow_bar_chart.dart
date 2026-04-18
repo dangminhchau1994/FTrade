@@ -82,8 +82,8 @@ class FlowBarChart extends StatelessWidget {
                       DateFormat('dd/MM').format(f.date),
                   yValueMapper: (f, _) => f.netValue / 1e9,
                   pointColorMapper: (f, _) => f.netValue >= 0
-                      ? AppTheme.gainColor
-                      : AppTheme.lossColor,
+                      ? AppColors.gain
+                      : AppColors.loss,
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(3),
                     bottom: Radius.circular(3),
