@@ -15,15 +15,26 @@ class MoneyFlowApiDatasource {
   final Dio _dio;
   final VietstockFinanceClient _vietstockClient;
   final _dateFormat = DateFormat('yyyy-MM-dd');
+  final _masvnDateFormat = DateFormat('yyyyMMdd');
 
   final Map<String, _TimedCache<_ForeignTradingBatch>> _batchCache = {};
   final Map<String, _TimedCache<List<ForeignFlow>>> _flowCache = {};
   final Map<String, _TimedCache<_MarketTotals>> _totalsCache = {};
   _TimedCache<DateTime>? _latestTradingDateCache;
+  _TimedCache<ForeignFlowStats>? _allMarketSummaryCache;
+  final Map<String, _TimedCache<List<String>>> _exchangeCodesCache = {};
+  final Map<String, _TimedCache<List<ForeignFlow>>> _exchangeHistoryCache = {};
+  // Prevents duplicate concurrent fetches per exchange.
+  final Map<String, Future<List<ForeignFlow>>?> _exchangeHistoryInFlight = {};
 
   static const _exchangeIds = ['1', '2', '3'];
   static const _pageSize = 50;
   static const _cacheTtl = Duration(seconds: 10);
+  static const _hoseFlowCacheTtl = Duration(minutes: 5);
+  static const _hoseCodesCacheTtl = Duration(hours: 6);
+
+  static const _masvnForeignHistoryUrl =
+      'https://masboard.masvn.com/api/v2/vs/foreignHistory';
 
   Future<MarketFlowSummary> getMarketFlowSummary() async {
     final tradingDate = await _getLatestTradingDate();
@@ -174,53 +185,189 @@ class MoneyFlowApiDatasource {
     return history;
   }
 
-  /// Today's totals for a specific exchange. [catId] = '' means all exchanges.
+  /// Today's totals for an exchange (catId: '2'=HOSE, '1'=HNX, '3'=UPCOM).
+  /// catId='' → vsForeignTotal(range:"1D"), all exchanges.
   Future<ForeignFlowStats> getExchangeSummary({String catId = ''}) async {
-    final date = await _getLatestTradingDate();
-    final ids = catId.isEmpty ? _exchangeIds : [catId];
-    final batches = await Future.wait(
-      ids.map((id) => _fetchExchangeBatch(date: date, exchangeId: id, page: 1)),
-    );
-    final totals = batches.fold<_MarketTotals>(
-      const _MarketTotals.empty(),
-      (acc, batch) => acc + batch.totals,
-    );
-    return ForeignFlowStats(
-      buyVolume: totals.buyVolume,
-      sellVolume: totals.sellVolume,
-      netVolume: totals.netVolume,
-      buyValue: totals.buyValue,
-      sellValue: totals.sellValue,
-      netValue: totals.netValue,
-      date: date,
-    );
+    if (catId.isEmpty) return _getAllMarketSummary();
+    return _getExchangeSummaryMasvn(catId);
   }
 
-  /// 10-session net-value history for a specific exchange. [catId] = '' = all.
+  /// 10-session history for an exchange via MASVN per-stock aggregation.
   Future<List<ForeignFlow>> getExchangeFlowHistory({String catId = ''}) async {
-    final dates = await _getRecentTradingDates(10);
-    final ids = catId.isEmpty ? _exchangeIds : [catId];
-    final history = <ForeignFlow>[];
-    for (final date in dates) {
-      final batches = await Future.wait(
-        ids.map((id) => _fetchExchangeBatch(date: date, exchangeId: id, page: 1)),
-      );
-      final totals = batches.fold<_MarketTotals>(
-        const _MarketTotals.empty(),
-        (acc, batch) => acc + batch.totals,
-      );
-      history.add(ForeignFlow(
-        symbol: catId.isEmpty ? 'ALL' : catId,
-        buyVolume: totals.buyVolume,
-        sellVolume: totals.sellVolume,
-        netVolume: totals.netVolume,
-        buyValue: totals.buyValue,
-        sellValue: totals.sellValue,
-        netValue: totals.netValue,
-        date: date,
-      ));
+    return _getExchangeHistoryMasvn(catId.isEmpty ? '2' : catId);
+  }
+
+  // ── MASVN foreign flow (per-exchange, all stocks) ─────────────────────────
+
+  static const _catIdToFloor = {'1': 'HNX', '2': 'HOSE', '3': 'UPCOM'};
+
+  /// vsForeignTotal(range:"1D") — one request covering ALL exchanges today.
+  Future<ForeignFlowStats> _getAllMarketSummary() async {
+    final cached = _allMarketSummaryCache;
+    if (cached != null &&
+        DateTime.now().difference(cached.fetchedAt) < _hoseFlowCacheTtl) {
+      return cached.value;
     }
+    final today = await _getLatestTradingDate();
+    const query =
+        'query{vsForeignTotal(range:"1D"){BuyVol,BuyVal,SellVol,SellVal,NetBuyVol,NetBuyVal}}';
+    try {
+      final response = await _dio.get<dynamic>(
+        _masvnForeignHistoryUrl,
+        queryParameters: {'query': query},
+      );
+      final raw = response.data as Map<String, dynamic>? ?? {};
+      final stats = ForeignFlowStats(
+        buyVolume: _toDouble(raw['BuyVol']),
+        sellVolume: _toDouble(raw['SellVol']),
+        netVolume: _toDouble(raw['NetBuyVol']),
+        buyValue: _toDouble(raw['BuyVal']),
+        sellValue: _toDouble(raw['SellVal']),
+        netValue: _toDouble(raw['NetBuyVal']),
+        date: today,
+      );
+      _allMarketSummaryCache = _TimedCache(value: stats, fetchedAt: DateTime.now());
+      return stats;
+    } catch (_) {
+      return _getExchangeSummaryMasvn('2');
+    }
+  }
+
+  /// Fetch stock codes for a given floor (HOSE/HNX/UPCOM) from VNDirect. Cached 6 h.
+  Future<List<String>> _getExchangeStockCodes(String floor) async {
+    final cached = _exchangeCodesCache[floor];
+    if (cached != null &&
+        DateTime.now().difference(cached.fetchedAt) < _hoseCodesCacheTtl) {
+      return cached.value;
+    }
+    final response = await _dio.get<dynamic>(
+      ApiConstants.stocks,
+      queryParameters: {'q': 'floor:$floor~type:STOCK', 'fields': 'code', 'size': 1000},
+    );
+    final data = (response.data as Map?)?['data'] as List? ?? [];
+    final codes = data
+        .map((e) => ((e as Map)['code'] as String? ?? '').toUpperCase())
+        .where((c) => c.isNotEmpty)
+        .toList();
+    _exchangeCodesCache[floor] = _TimedCache(value: codes, fetchedAt: DateTime.now());
+    return codes;
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchMasvnForeignHistory(
+    String symbol,
+  ) async {
+    // fetchCount:15 without date range — avoids multi-day range query
+    // which returns empty from Flutter's HTTP stack (works only in curl/Python).
+    final query = 'query{vsForeignHistory('
+        'StockCode:"$symbol",'
+        'fetchCount:15'
+        '){TotalBuyVol,TotalSellVol,TotalBuyVal,TotalSellVal,TradingDate}}';
+    try {
+      final response = await _dio.get<dynamic>(
+        _masvnForeignHistoryUrl,
+        queryParameters: {'query': query},
+      );
+      final list = response.data as List? ?? [];
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<ForeignFlow>> _getExchangeHistoryMasvn(String catId) async {
+    final cached = _exchangeHistoryCache[catId];
+    if (cached != null &&
+        DateTime.now().difference(cached.fetchedAt) < _hoseFlowCacheTtl) {
+      return cached.value;
+    }
+    final inFlight = _exchangeHistoryInFlight[catId];
+    if (inFlight != null) return inFlight;
+
+    final future = _fetchExchangeHistoryMasvn(catId);
+    _exchangeHistoryInFlight[catId] = future;
+    try {
+      return await future;
+    } finally {
+      _exchangeHistoryInFlight[catId] = null;
+    }
+  }
+
+  Future<List<ForeignFlow>> _fetchExchangeHistoryMasvn(String catId) async {
+    final floor = _catIdToFloor[catId] ?? 'HOSE';
+    final dates = await _getRecentTradingDates(10);
+    if (dates.isEmpty) return [];
+    final codes = await _getExchangeStockCodes(floor);
+    if (codes.isEmpty) return [];
+
+    // Chunked parallel fetches — avoids overwhelming the iOS HTTP stack.
+    const chunkSize = 100;
+    final allRows = <List<Map<String, dynamic>>>[];
+    for (var i = 0; i < codes.length; i += chunkSize) {
+      final end = (i + chunkSize < codes.length) ? i + chunkSize : codes.length;
+      final chunkResults = await Future.wait(
+        codes.sublist(i, end).map((sym) => _fetchMasvnForeignHistory(sym)),
+      );
+      allRows.addAll(chunkResults);
+    }
+
+    final Map<String, _FlowAccumulator> byDate = {};
+    for (final stockRows in allRows) {
+      for (final row in stockRows) {
+        final key = row['TradingDate'] as String? ?? '';
+        if (key.length != 8) continue;
+        byDate.putIfAbsent(key, () => _FlowAccumulator());
+        byDate[key]!.buyVolume += _toDouble(row['TotalBuyVol']);
+        byDate[key]!.sellVolume += _toDouble(row['TotalSellVol']);
+        byDate[key]!.buyValue += _toDouble(row['TotalBuyVal']);
+        byDate[key]!.sellValue += _toDouble(row['TotalSellVal']);
+      }
+    }
+
+    final history = dates.map((d) {
+      final key = _masvnDateFormat.format(d);
+      final t = byDate[key] ?? _FlowAccumulator();
+      return ForeignFlow(
+        symbol: floor,
+        buyVolume: t.buyVolume,
+        sellVolume: t.sellVolume,
+        netVolume: t.buyVolume - t.sellVolume,
+        buyValue: t.buyValue,
+        sellValue: t.sellValue,
+        netValue: t.buyValue - t.sellValue,
+        date: d,
+      );
+    }).toList();
+
+    _exchangeHistoryCache[catId] = _TimedCache(value: history, fetchedAt: DateTime.now());
     return history;
+  }
+
+  /// Derives today's summary from already-fetched history — avoids a duplicate batch.
+  Future<ForeignFlowStats> _getExchangeSummaryMasvn(String catId) async {
+    final floor = _catIdToFloor[catId] ?? 'HOSE';
+    final history = await _getExchangeHistoryMasvn(catId);
+    final today = await _getLatestTradingDate();
+    final todayKey = _dateFormat.format(today);
+
+    final todayFlow = history.firstWhere(
+      (f) => _dateFormat.format(f.date) == todayKey,
+      orElse: () => ForeignFlow(
+        symbol: floor,
+        buyVolume: 0, sellVolume: 0, netVolume: 0,
+        buyValue: 0, sellValue: 0, netValue: 0,
+        date: today,
+      ),
+    );
+
+    return ForeignFlowStats(
+      buyVolume: todayFlow.buyVolume,
+      sellVolume: todayFlow.sellVolume,
+      netVolume: todayFlow.netVolume,
+      buyValue: todayFlow.buyValue,
+      sellValue: todayFlow.sellValue,
+      netValue: todayFlow.netValue,
+      date: today,
+    );
   }
 
   Future<List<ForeignFlow>> _getAllFlows(DateTime date) async {
@@ -596,4 +743,11 @@ class _TimedCache<T> {
 
   final T value;
   final DateTime fetchedAt;
+}
+
+class _FlowAccumulator {
+  double buyVolume = 0;
+  double sellVolume = 0;
+  double buyValue = 0;
+  double sellValue = 0;
 }

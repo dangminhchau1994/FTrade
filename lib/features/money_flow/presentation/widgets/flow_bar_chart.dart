@@ -65,14 +65,18 @@ class FlowBarChart extends StatelessWidget {
                     borderWidth: 1,
                   ),
                 ],
+                // yValueMapper already divides by 1e9, so axis values are in tỷ
                 axisLabelFormatter: (AxisLabelRenderDetails details) {
-                  final v = details.value / 1e9;
-                  final label = v == 0 ? '0' : '${v.toStringAsFixed(0)}tỷ';
-                  return ChartAxisLabel(label, details.textStyle);
+                  final v = details.value;
+                  return ChartAxisLabel(
+                    v == 0 ? '0' : '${v.toStringAsFixed(0)}tỷ',
+                    details.textStyle,
+                  );
                 },
               ),
               tooltipBehavior: TooltipBehavior(
                 enable: true,
+                format: 'point.y tỷ',
                 decimalPlaces: 1,
               ),
               series: <CartesianSeries<ForeignFlow, String>>[

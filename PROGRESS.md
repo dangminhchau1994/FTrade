@@ -322,6 +322,15 @@
 - [x] `api_constants.dart` — thêm `masvnSocketUrl`
 - NOTE: `_Http11Overrides` trong `main.dart` vẫn có ích cho WebSocket (cần HTTP/1.1 Upgrade)
 
+### 2026-04-18 - Nước ngoài (Foreign Flow) Fix ✅ DONE
+- [x] Phát hiện Vietstock `KQGDGiaoDichNDTNNPaging` chỉ trả regulatory filings (~7 giao dịch/ngày) — không phải toàn bộ giao dịch thị trường
+- [x] Chuyển sang MASVN `vsForeignHistory` per-stock aggregation cho HOSE, HNX, UPCOM
+- [x] `_getExchangeStockCodes(floor)` — fetch danh sách mã CP từ VNDirect, cache 6h
+- [x] `_fetchExchangeHistoryMasvn(catId)` — chunked 100 requests/lần, `fetchCount:15` (bỏ date range vì Flutter HTTP stack trả empty)
+- [x] `_getExchangeSummaryMasvn(catId)` — derive từ history, tránh duplicate batch
+- [x] Tổng quát hoá cho cả 3 sàn: HOSE (~439 mã), HNX (~300 mã), UPCOM (~700 mã)
+- [x] Bỏ tab "Tất cả" và "Tổng quan" trong MoneyFlowScreen — mặc định mở HSX
+
 ### 2026-04-16 - Design System Migration ✅ DONE
 - [x] `AppColors` class — MASVN MTS color palette (primary orange, stock semantic colors, neutral scale)
 - [x] `AppTextStyle` class — Manrope font, full typography scale (display/h/b/s/c sizes × R/M/S/B weights)
