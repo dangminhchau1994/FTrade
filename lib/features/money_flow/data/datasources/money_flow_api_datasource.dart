@@ -24,6 +24,7 @@ class MoneyFlowApiDatasource {
   _TimedCache<ForeignFlowStats>? _allMarketSummaryCache;
   final Map<String, _TimedCache<List<String>>> _exchangeCodesCache = {};
   final Map<String, _TimedCache<List<ForeignFlow>>> _exchangeHistoryCache = {};
+  final Map<String, _TimedCache<List<ForeignFlow>>> _heatmapCache = {};
   // Prevents duplicate concurrent fetches per exchange.
   final Map<String, Future<List<ForeignFlow>>?> _exchangeHistoryInFlight = {};
 
@@ -51,14 +52,69 @@ class MoneyFlowApiDatasource {
     );
   }
 
-  Future<List<ForeignFlow>> getTopNetBuyers() async {
+  Future<List<ForeignFlow>> getTopNetBuyers({String catId = ''}) async {
     final tradingDate = await _getLatestTradingDate();
-    return _topBuyers(await _getAllFlows(tradingDate));
+    return _topBuyers(await _getAllFlows(tradingDate, catId: catId));
   }
 
-  Future<List<ForeignFlow>> getTopNetSellers() async {
+  Future<List<ForeignFlow>> getTopNetSellers({String catId = ''}) async {
     final tradingDate = await _getLatestTradingDate();
-    return _topSellers(await _getAllFlows(tradingDate));
+    return _topSellers(await _getAllFlows(tradingDate, catId: catId));
+  }
+
+  /// Per-stock foreign flows for a given exchange on the latest trading date.
+  /// Uses MASVN per-stock data (same source as Fireant) — sorted by |netValue|.
+  Future<List<ForeignFlow>> getHeatmapFlows({String catId = ''}) async {
+    final cacheKey = catId.isEmpty ? 'all' : catId;
+    final cached = _heatmapCache[cacheKey];
+    if (cached != null &&
+        DateTime.now().difference(cached.fetchedAt) < _hoseFlowCacheTtl) {
+      return cached.value;
+    }
+
+    final floor = catId.isEmpty ? 'HOSE' : (_catIdToFloor[catId] ?? 'HOSE');
+    final tradingDate = await _getLatestTradingDate();
+    final tradingDateStr = _masvnDateFormat.format(tradingDate);
+
+    final codes = await _getExchangeStockCodes(floor);
+    if (codes.isEmpty) return [];
+
+    const chunkSize = 50;
+    final stockFlows = <ForeignFlow>[];
+
+    for (var i = 0; i < codes.length; i += chunkSize) {
+      final end = (i + chunkSize < codes.length) ? i + chunkSize : codes.length;
+      final chunkFlows = await Future.wait(
+        codes.sublist(i, end).map((sym) async {
+          final rows = await _fetchMasvnForeignHistory(sym);
+          for (final row in rows) {
+            if ((row['TradingDate'] as String? ?? '') == tradingDateStr) {
+              final buyVal = _toDouble(row['TotalBuyVal']);
+              final sellVal = _toDouble(row['TotalSellVal']);
+              final netVal = buyVal - sellVal;
+              if (netVal == 0) return null;
+              return ForeignFlow(
+                symbol: sym,
+                buyVolume: _toDouble(row['TotalBuyVol']),
+                sellVolume: _toDouble(row['TotalSellVol']),
+                netVolume: _toDouble(row['TotalBuyVol']) - _toDouble(row['TotalSellVol']),
+                buyValue: buyVal,
+                sellValue: sellVal,
+                netValue: netVal,
+                date: tradingDate,
+              );
+            }
+          }
+          return null;
+        }),
+      );
+      stockFlows.addAll(chunkFlows.whereType<ForeignFlow>());
+    }
+
+    stockFlows.sort((a, b) => b.netValue.abs().compareTo(a.netValue.abs()));
+    final top50 = stockFlows.take(50).toList();
+    _heatmapCache[cacheKey] = _TimedCache(value: top50, fetchedAt: DateTime.now());
+    return top50;
   }
 
   /// Top cổ phiếu có KL giao dịch bất thường (ratio = today / avg20d > 1.5)
@@ -370,15 +426,16 @@ class MoneyFlowApiDatasource {
     );
   }
 
-  Future<List<ForeignFlow>> _getAllFlows(DateTime date) async {
-    final cacheKey = _dateFormat.format(date);
+  Future<List<ForeignFlow>> _getAllFlows(DateTime date, {String catId = ''}) async {
+    final cacheKey = '${_dateFormat.format(date)}|$catId';
     final cached = _readCache(_flowCache, cacheKey);
     if (cached != null) {
       return cached;
     }
 
+    final idsToFetch = catId.isNotEmpty ? [catId] : _exchangeIds;
     final exchangeFlows = await Future.wait(
-      _exchangeIds.map((exchangeId) => _fetchExchangeFlows(date, exchangeId)),
+      idsToFetch.map((exchangeId) => _fetchExchangeFlows(date, exchangeId)),
     );
 
     final merged = _mergeFlows(exchangeFlows.expand((items) => items).toList());

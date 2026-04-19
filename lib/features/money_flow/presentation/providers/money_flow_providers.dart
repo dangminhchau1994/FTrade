@@ -29,6 +29,23 @@ final topNetSellersProvider = FutureProvider<List<ForeignFlow>>((ref) async {
   return ds.getTopNetSellers();
 });
 
+/// [catId]: '' = tất cả, '2' = HSX, '1' = HNX, '3' = UPCOM
+final topNetBuyersByCatProvider =
+    FutureProvider.family<List<ForeignFlow>, String>((ref, catId) async {
+  return ref.watch(moneyFlowDatasourceProvider).getTopNetBuyers(catId: catId);
+});
+
+final topNetSellersByCatProvider =
+    FutureProvider.family<List<ForeignFlow>, String>((ref, catId) async {
+  return ref.watch(moneyFlowDatasourceProvider).getTopNetSellers(catId: catId);
+});
+
+/// All non-zero flows for a given exchange sorted by |netValue| — used by heatmap.
+final foreignHeatmapProvider =
+    FutureProvider.family<List<ForeignFlow>, String>((ref, catId) async {
+  return ref.watch(moneyFlowDatasourceProvider).getHeatmapFlows(catId: catId);
+});
+
 final foreignFlowHistoryProvider =
     FutureProvider.family<List<ForeignFlow>, String>((ref, symbol) async {
       final ds = ref.watch(moneyFlowDatasourceProvider);

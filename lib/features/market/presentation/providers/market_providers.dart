@@ -60,6 +60,11 @@ final indexTopLosersProvider =
   return ref.watch(marketApiDatasourceProvider).getTopLosersForExchange(exchange);
 });
 
+final indexIntradayChartProvider =
+    FutureProvider.family<List<ChartPoint>, String>((ref, symbol) async {
+  return ref.watch(chartApiDatasourceProvider).getIntradayChartData(symbol);
+});
+
 final indexChartProvider =
     FutureProvider.family<List<ChartPoint>, ({String symbol, String period})>(
   (ref, args) async {

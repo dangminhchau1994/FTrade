@@ -20,40 +20,30 @@ class ForeignHeatmapScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final buyersAsync = ref.watch(topNetBuyersProvider);
-    final sellersAsync = ref.watch(topNetSellersProvider);
+    final flowsAsync = ref.watch(foreignHeatmapProvider(catId));
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('TOP NN mua bán ròng — ${_exchangeName(catId)}'),
+        title: Text('TOP NN mua bán ròng trên ${_exchangeName(catId)}'),
       ),
-      body: buyersAsync.when(
+      body: flowsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Lỗi: $e')),
-        data: (buyers) => sellersAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Lỗi: $e')),
-          data: (sellers) {
-            final items = _buildItems(buyers, sellers);
-            if (items.isEmpty) {
-              return Center(
-                child: Text('Không có dữ liệu', style: AppTextStyle.b14R),
-              );
-            }
-            return _Heatmap(items: items);
-          },
-        ),
+        data: (flows) {
+          final items = _buildItems(flows);
+          if (items.isEmpty) {
+            return Center(
+              child: Text('Không có dữ liệu', style: AppTextStyle.b14R),
+            );
+          }
+          return _Heatmap(items: items);
+        },
       ),
     );
   }
 
-  List<_HeatItem> _buildItems(
-    List<ForeignFlow> buyers,
-    List<ForeignFlow> sellers,
-  ) {
-    final all = [...buyers, ...sellers];
-    all.sort((a, b) => b.netValue.abs().compareTo(a.netValue.abs()));
-    return all.map((f) {
+  List<_HeatItem> _buildItems(List<ForeignFlow> flows) {
+    return flows.map((f) {
       final bilValue = f.netValue / 1e9;
       final absVal = bilValue.abs();
       final color = f.netValue >= 0 ? _gainColor(absVal) : _lossColor(absVal);
@@ -115,33 +105,51 @@ class _Heatmap extends StatelessWidget {
               items[tile.indices[0]].color,
           labelBuilder: (BuildContext context, TreemapTile tile) {
             final item = items[tile.indices[0]];
-            return Padding(
-              padding: const EdgeInsets.all(4),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    item.symbol,
-                    style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                final h = constraints.maxHeight;
+                final w = constraints.maxWidth;
+                if (h < 12 || w < 16) return const SizedBox.shrink();
+                final symbolSize = (w / 5).clamp(7.0, 13.0);
+                final valueSize = (symbolSize * 0.75).clamp(6.0, 10.0);
+                final showValue = h >= symbolSize + valueSize + 6;
+                return ClipRect(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(2),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            item.symbol,
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: symbolSize,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          if (showValue) ...[
+                            SizedBox(height: h * 0.04),
+                            Text(
+                              item.label,
+                              style: TextStyle(
+                                color: AppColors.white,
+                                fontSize: valueSize,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.label,
-                    style: const TextStyle(
-                      color: AppColors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w400,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                );
+              },
             );
           },
           tooltipBuilder: (BuildContext context, TreemapTile tile) {

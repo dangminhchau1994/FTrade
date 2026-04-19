@@ -57,6 +57,43 @@ class ChartApiDatasource {
     }).toList();
   }
 
+  /// Latest session's intraday bars (15-min resolution) via SSI chart API.
+  /// Looks back 3 days so weekends/holidays fall back to the last trading day.
+  Future<List<ChartPoint>> getIntradayChartData(String symbol) async {
+    final now = DateTime.now();
+    final from = now.subtract(const Duration(days: 3));
+    final response = await _dio.get(
+      _ssiChartUrl,
+      queryParameters: {
+        'symbol': symbol,
+        'resolution': '1',
+        'from': from.millisecondsSinceEpoch ~/ 1000,
+        'to': now.millisecondsSinceEpoch ~/ 1000,
+      },
+    );
+    final payload = response.data as Map<String, dynamic>;
+    if (payload['code'] != 'SUCCESS') return [];
+    final d = payload['data'] as Map<String, dynamic>;
+    final t = d['t'] as List? ?? [];
+    final c = d['c'] as List? ?? [];
+    if (t.isEmpty) return [];
+
+    final all = List.generate(t.length, (i) => ChartPoint(
+      date: DateTime.fromMillisecondsSinceEpoch((t[i] as num).toInt() * 1000),
+      open: 0, high: 0, low: 0,
+      close: (c[i] as num).toDouble(),
+      volume: 0,
+    ));
+
+    // Keep only bars from the last trading day
+    final lastDate = all.last.date;
+    final lastDay = DateTime(lastDate.year, lastDate.month, lastDate.day);
+    return all.where((p) {
+      final d = DateTime(p.date.year, p.date.month, p.date.day);
+      return d == lastDay;
+    }).toList();
+  }
+
   /// Historical OHLCV for market indices (VNINDEX, HNXINDEX, UPCOMINDEX).
   /// Uses SSI iboard chart API (no auth required).
   Future<List<ChartPoint>> getIndexChartData(
