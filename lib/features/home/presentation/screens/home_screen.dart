@@ -213,7 +213,7 @@ class _IndexCardsRow extends StatelessWidget {
   static const _chartSymbol = {
     'VN-Index': 'VNINDEX',
     'HNX-Index': 'HNXINDEX',
-    'UPCOM': 'HNXUpcomIndex',
+    'UPCOM': 'UPCOMINDEX',
     'VN30': 'VN30',
     'HNX30': 'HNX30',
   };
@@ -229,7 +229,7 @@ class _IndexCardsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 108,
+      height: 116,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
@@ -285,7 +285,7 @@ class _IndexCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(12),
-          border: Border(left: BorderSide(color: color, width: 3)),
+          border: Border(top: BorderSide(color: color, width: 4)),
         ),
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
         child: Column(
@@ -327,7 +327,7 @@ class _IndexCard extends ConsumerWidget {
               ],
             ),
             const Spacer(),
-            // Sparkline with baseline
+            // Sparkline at bottom
             SizedBox(
               height: 30,
               child: chartAsync == null
@@ -338,7 +338,6 @@ class _IndexCard extends ConsumerWidget {
                               size: const Size(double.infinity, 30),
                               painter: _SparklinePainter(
                                 values: pts.map((p) => p.close).toList(),
-                                color: color,
                                 prevClose: prevClose,
                               ),
                             )
@@ -356,12 +355,10 @@ class _IndexCard extends ConsumerWidget {
 
 class _SparklinePainter extends CustomPainter {
   final List<double> values;
-  final Color color;
   final double prevClose;
 
   const _SparklinePainter({
     required this.values,
-    required this.color,
     required this.prevClose,
   });
 
@@ -369,7 +366,6 @@ class _SparklinePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (values.length < 2) return;
 
-    // Include prevClose in range so baseline is always visible
     final allValues = [...values, prevClose];
     final minV = allValues.reduce(math.min);
     final maxV = allValues.reduce(math.max);
@@ -381,14 +377,15 @@ class _SparklinePainter extends CustomPainter {
     double yOf(double v) => (1 - (v - lo) / span) * size.height;
     double xOf(int i) => i / (values.length - 1) * size.width;
 
-    // Baseline (previous close) — dashed amber line
-    final baseY = yOf(prevClose);
+    final baseY = yOf(prevClose).clamp(0.0, size.height);
+
+    // Dashed baseline at previous close
+    var dx = 0.0;
     const dashW = 4.0;
     const gapW = 3.0;
     final baselinePaint = Paint()
       ..color = AppColors.ref
       ..strokeWidth = 1.0;
-    var dx = 0.0;
     while (dx < size.width) {
       canvas.drawLine(
         Offset(dx, baseY),
@@ -398,46 +395,49 @@ class _SparklinePainter extends CustomPainter {
       dx += dashW + gapW;
     }
 
-    // Build sparkline path
+    // Sparkline path
     final path = Path()..moveTo(xOf(0), yOf(values[0]));
     for (var i = 1; i < values.length; i++) {
       path.lineTo(xOf(i), yOf(values[i]));
     }
 
-    // Fill area between sparkline and baseline (makes chart visible like Fireant)
+    // Fill path (sparkline → baseline → back)
     final fillPath = Path.from(path);
     fillPath.lineTo(xOf(values.length - 1), baseY);
     fillPath.lineTo(xOf(0), baseY);
     fillPath.close();
-    canvas.drawPath(
-      fillPath,
-      Paint()
-        ..color = color.withValues(alpha: 0.25)
-        ..style = PaintingStyle.fill,
-    );
 
-    // Sparkline stroke
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..strokeWidth = 1.5
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
+    final linePaint = Paint()
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
-    // Dot at last point
+    // GREEN above baseline (price > prevClose)
+    canvas.save();
+    canvas.clipRect(Rect.fromLTRB(0, 0, size.width, baseY));
+    canvas.drawPath(fillPath, Paint()..color = AppColors.gain.withValues(alpha: 0.2)..style = PaintingStyle.fill);
+    canvas.drawPath(path, linePaint..color = AppColors.gain);
+    canvas.restore();
+
+    // RED below baseline (price < prevClose)
+    canvas.save();
+    canvas.clipRect(Rect.fromLTRB(0, baseY, size.width, size.height));
+    canvas.drawPath(fillPath, Paint()..color = AppColors.loss.withValues(alpha: 0.2)..style = PaintingStyle.fill);
+    canvas.drawPath(path, linePaint..color = AppColors.loss);
+    canvas.restore();
+
+    // Dot at last price — green if above baseline, red if below
     canvas.drawCircle(
       Offset(xOf(values.length - 1), yOf(values.last)),
       3,
-      Paint()..color = color,
+      Paint()..color = values.last >= prevClose ? AppColors.gain : AppColors.loss,
     );
   }
 
   @override
   bool shouldRepaint(covariant _SparklinePainter old) =>
-      old.values != values || old.color != color || old.prevClose != prevClose;
+      old.values != values || old.prevClose != prevClose;
 }
 
 // ── Quick access card ─────────────────────────────────────────────────────────

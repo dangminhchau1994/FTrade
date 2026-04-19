@@ -57,25 +57,33 @@ class ChartApiDatasource {
     }).toList();
   }
 
-  /// Latest session's intraday bars (15-min resolution) via SSI chart API.
+  static const _vietstockHistoryUrl = 'https://api.vietstock.vn/tvnew/history';
+  static const _vietstockHeaders = {
+    'Origin': 'https://stockchart.vietstock.vn',
+    'Referer': 'https://stockchart.vietstock.vn/',
+    'User-Agent': 'Mozilla/5.0',
+  };
+
+  /// Latest session's 1-min bars via Vietstock tvnew API.
   /// Looks back 3 days so weekends/holidays fall back to the last trading day.
+  /// Works for VNINDEX, HNXINDEX, and UPCOMINDEX.
   Future<List<ChartPoint>> getIntradayChartData(String symbol) async {
     final now = DateTime.now();
     final from = now.subtract(const Duration(days: 3));
     final response = await _dio.get(
-      _ssiChartUrl,
+      _vietstockHistoryUrl,
       queryParameters: {
         'symbol': symbol,
         'resolution': '1',
         'from': from.millisecondsSinceEpoch ~/ 1000,
         'to': now.millisecondsSinceEpoch ~/ 1000,
       },
+      options: Options(headers: _vietstockHeaders),
     );
     final payload = response.data as Map<String, dynamic>;
-    if (payload['code'] != 'SUCCESS') return [];
-    final d = payload['data'] as Map<String, dynamic>;
-    final t = d['t'] as List? ?? [];
-    final c = d['c'] as List? ?? [];
+    if (payload['s'] != 'ok') return [];
+    final t = payload['t'] as List? ?? [];
+    final c = payload['c'] as List? ?? [];
     if (t.isEmpty) return [];
 
     final all = List.generate(t.length, (i) => ChartPoint(
